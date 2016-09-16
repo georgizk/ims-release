@@ -15,7 +15,8 @@ class CreateReleaseTable extends AbstractMigration
       `status` INT(10) UNSIGNED NOT NULL,
     PRIMARY KEY (`id`),
     UNIQUE KEY `name` (`name`),
-    UNIQUE KEY `filename` (`filename`),
+    INDEX `date` (`date`),
+    INDEX `status` (`status`),
     FOREIGN KEY `project_id` (`project_id`)
       REFERENCES project(`id`)
       ON DELETE CASCADE
