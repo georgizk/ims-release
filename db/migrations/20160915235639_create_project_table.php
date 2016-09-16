@@ -2,11 +2,11 @@
 
 use Phinx\Migration\AbstractMigration;
 
-class CreateReleaseTable extends AbstractMigration
+class CreateProjectTable extends AbstractMigration
 {
   public function up()
   {
-    $this->execute("CREATE TABLE `release` (
+    $this->execute("CREATE TABLE `project` (
       `id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
       `name` VARCHAR(128) NOT NULL,
       `filename` VARCHAR(128) NOT NULL,
@@ -21,6 +21,6 @@ class CreateReleaseTable extends AbstractMigration
 
   public function down()
   {
-    $this->execute("DROP TABLE `release`");
+    $this->execute("DROP TABLE `project`");
   }
 }

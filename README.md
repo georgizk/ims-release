@@ -5,6 +5,9 @@ corresponding to the release.
 
 # Deoployment
 
-Install composer dependencies `composer install`
+Install composer.
+
+Install composer dependencies with `composer install`.
+
 Init phinx `vendor/bin/phinx init` and modify the config according to
-your database setup. Migrate `vendor/bin/phinx migrate`
+your database setup. Migrate with `vendor/bin/phinx migrate`.
