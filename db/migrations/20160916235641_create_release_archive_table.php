@@ -2,7 +2,7 @@
 
 use Phinx\Migration\AbstractMigration;
 
-class CreateReleasePageTable extends AbstractMigration
+class CreateReleaseArchiveTable extends AbstractMigration
 {
 
   public function up()
