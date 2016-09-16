@@ -16,7 +16,7 @@ class CreateReleasePageTable extends AbstractMigration
       `checksum` INT(10) UNSIGNED NOT NULL,
     PRIMARY KEY (`id`),
     FOREIGN KEY `release_id` (`release_id`)
-      REFERENCES release(`id`)
+      REFERENCES `release`(`id`)
       ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
   }

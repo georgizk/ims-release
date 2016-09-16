@@ -9,13 +9,13 @@ class CreateReleaseArchiveTable extends AbstractMigration
   {
     $this->execute("CREATE TABLE `release_archive` (
       `id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
-      `release_id` INT(10) UNSIGNED NOT NULL,
+      `release_id` INT(10) UNSIGNED NOT NULL UNIQUE,
       `size` INT(10) UNSIGNED NOT NULL,
       `contents` LONGBLOB NOT NULL,
       `checksum` INT(10) UNSIGNED NOT NULL,
     PRIMARY KEY (`id`),
-    UNIQUE FOREIGN KEY `release_id` (`release_id`)
-      REFERENCES release(`id`)
+    FOREIGN KEY `release_id_archive` (`release_id`)
+      REFERENCES `release`(`id`)
       ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
   }
