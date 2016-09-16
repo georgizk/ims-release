@@ -16,8 +16,7 @@ class DatabaseStorage implements IStorage
   {
     $table = $key;
     $query = "SELECT * FROM `$table` WHERE `id` = ?";
-    $statement = $this->pdo->prepare($query);
-    $statement->execute([$id]);
+    $statement = $this->query($query, [$id]);
     return $statement->fetchObject($class);
   }
 
@@ -25,8 +24,7 @@ class DatabaseStorage implements IStorage
   {
     $table = $key;
     $query = "DELETE FROM `$table` WHERE `id` = ? LIMIT 1";
-    $statement = $this->pdo->prepare($query);
-    $statement->execute([$id]);
+    return $this->query($query, [$id]);
   }
 
   public function save($table, $object)
@@ -38,8 +36,7 @@ class DatabaseStorage implements IStorage
     $query = "INSERT INTO `$table` ";
     $query .= '(`' . implode('`, `', $cols) . '`) ';
     $query .= 'VALUES (:' . implode(', :', $cols) . ')';
-    $statement = $this->pdo->prepare($query);
-    $statement->execute($arr);
+    $this->query($query, $arr);
     return $this->pdo->lastInsertId();
   }
 
@@ -55,8 +52,16 @@ class DatabaseStorage implements IStorage
       $query .= "SET `$col` = :$col ";
     }
     $query .= 'WHERE `id` = :id LIMIT 1';
-    $statement = $this->pdo->prepare($query);
+
     $arr['id'] = $id;
+
+    return $this->query($query, $arr);
+  }
+
+  public function query($query, $args = array())
+  {
+    $statement = $this->pdo->prepare($query);
     $statement->execute($arr);
+    return $statement;
   }
 }
