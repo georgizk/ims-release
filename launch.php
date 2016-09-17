@@ -39,7 +39,7 @@ $app = new \Slim\App($di);
  *   /projects/5/releases/2/archive
  */
 $app->group('/api', function() {
-  $this->group('/project', function() {
+  $this->group('/projects', function() {
     $this->get('', function($request, $response) {
       $response->getBody()->write('List of project ids');
       return $response;
