@@ -39,7 +39,7 @@ Instead of this endpoint accepting parameters in the usual URL query parameter f
 Name | Type | Description
 -----|------|------------
 projectName | string | The name of a project
-chapter | integer | The id of the release
+chapter | string | The id of the release
 groupName | string | The shorthand name of the scanlation group, e.g. ims
 checksum | string | The hex encoding of the sha256 hash of the zip file
 version | integer | The version number of the release, starting from 1
@@ -66,9 +66,9 @@ Instead of this endpoint accepting parameters in the usual URL query parameter f
 Name | Type | Description
 -----|------|------------
 projectName | string | The name of a project
-chapter | integer | The chapter number
+chapter | string | The chapter number
 version | integer | The version number of the release, starting from 1
-page | integer | The page number, starting from 1
+page | string | The page number, starting from 1
 ext | string | The filetype extension of the page's file
 
 #### Response
@@ -150,10 +150,10 @@ PUT /projects/{projectId}
 Name | Type | Description
 -----|------|------------
 projectId | integer | The unique identifier for the project
-name | optional string | A new human-readable name for the project
-filename | optional string | A new projectName for the project
-status | optional string | The new status of the project
-description | optional string | A new description for the project
+name | string | A new human-readable name for the project
+filename | string | A new projectName for the project
+status | string | The new status of the project
+description | string | A new description for the project
 
 #### Response
 
@@ -212,7 +212,7 @@ POST /projects/{projectId}/releases
 
 Name | Type | Description
 -----|------|------------
-chapter | integer | The number of the chapter
+chapter | string | The number of the chapter
 version | integer | The version of the release of the particular chapter
 status | string | The release status, e.g. "released" or "draft"
 
@@ -241,7 +241,7 @@ releaseId | integer | The unique id of the release
 Name | Type | Description
 -----|------|------------
 projectName | string | The unique projectName of the project that the release was created for
-chapter | integer | The integer number of the chapter the release contains
+chapter | string | The integer number of the chapter the release contains
 groupName | string | "ims"
 checksum | string | The hex encoding of the sha256 checksum of the release's zip file
 version | integer | The release version number
@@ -259,9 +259,9 @@ Name | Type | Description
 -----|------|------------
 projectId | integer | The unique id of the project under which the release was created
 releaseId | integer | The unique id of the release
-chapter | optional integer | The new chapter number
-version | optional integer | The new version number for the release
-status | optional string | The new status of the release
+chapter | string | The new chapter number
+version | integer | The new version number for the release
+status | string | The new status of the release
 
 #### Response
 
@@ -307,7 +307,7 @@ releaseId | integer | The unique id of the release
 
 Name | Type | Description
 -----|------|------------
-pages | `[{"projectName": string, "chapter": integer, "version": integer, "page": integer, "ext": string}]`| An array of objects describing each of the pages part of the release
+pages | `[{"projectName": string, "chapter": string, "version": integer, "page": integer, "ext": string}]`| An array of objects describing each of the pages part of the release
 
 ### Add a new page to a release
 
@@ -321,7 +321,7 @@ Name | Type | Description
 -----|------|------------
 projectId | integer | The unique id of the project under which the release was created
 releaseId | integer | The unique id of the release
-page | integer | The page number
+page | string | The page number
 
 #### Release
 
