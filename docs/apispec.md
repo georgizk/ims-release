@@ -106,7 +106,7 @@ POST /projects
 Name | Type | Description
 -----|------|------------
 name | string | The human-readable name of the project
-filename | string | The projectName identifier for archive filenames. Must be unique
+projectName| string | The projectName identifier for archive filenames. Must be unique
 description | string | A longer description of the project
 status | string | The current status of the project. One of "ongoing", "complete", "dropped", etc.
 
@@ -135,7 +135,7 @@ Name | Type | Description
 -----|------|------------
 createdAt | string | The date when the project was created
 name | string | The descriptive name of the project
-filename | string | The projectName
+projectName | string | The unique project name shorthand, used in file names
 status | string | The current status of the project
 description | string | The description of the project
 
@@ -151,7 +151,7 @@ Name | Type | Description
 -----|------|------------
 projectId | integer | The unique identifier for the project
 name | string | A new human-readable name for the project
-filename | string | A new projectName for the project
+projectName | string | A new unique shorthand name, to use in filenames
 status | string | The new status of the project
 description | string | A new description for the project
 
