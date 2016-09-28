@@ -9,14 +9,14 @@ type ProjectStatus string
 
 // ProjectStatus pseudo-enum values
 const (
-	StatusPublished ProjectStatus = "published"
+	PStatusPublished ProjectStatus = "published"
 
-	Statuses = []ProjectStatus{StatusPublished}
+	PStatuses = []ProjectStatus{StatusPublished}
 )
 
 // Errors pertaining to the data in a Project or operations on Projects.
 var (
-	ErrInvalidProjectStatus = fmt.Errorf("Project status must be one of the following: %s\n", strings.Join([]string(Statuses), ", "))
+	ErrInvalidProjectStatus = fmt.Errorf("Project status must be one of the following: %s\n", strings.Join([]string(PStatuses), ", "))
 )
 
 // Project contains information about a scanlation project, which has a human-readable name, a unique shorthand name,
@@ -32,7 +32,7 @@ type Project struct {
 
 // Validate checks that the "status" of the project is one of the accepted ProjectStatus values.
 func (p Project) Validate() error {
-	for _, status := range Statuses {
+	for _, status := range PStatuses {
 		if p.Status == status {
 			return nil
 		}
