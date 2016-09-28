@@ -41,7 +41,6 @@ Name | Type | Description
 projectName | string | The name of a project
 chapter | string | The id of the release
 groupName | string | The shorthand name of the scanlation group, e.g. ims
-checksum | string | The hex encoding of the sha256 hash of the zip file
 version | integer | The version number of the release, starting from 1
 
 #### Response
