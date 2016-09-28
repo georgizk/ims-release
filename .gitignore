@@ -1,2 +1,6 @@
 /vendor/
 /phinx.yml
+
+# Compiled binary
+ims-release
+main
