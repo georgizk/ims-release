@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -10,13 +11,15 @@ type ProjectStatus string
 // ProjectStatus pseudo-enum values
 const (
 	PStatusPublished ProjectStatus = "published"
+)
 
-	PStatuses = []ProjectStatus{StatusPublished}
+var (
+	PStatuses = []ProjectStatus{PStatusPublished}
 )
 
 // Errors pertaining to the data in a Project or operations on Projects.
 var (
-	ErrInvalidProjectStatus = fmt.Errorf("Project status must be one of the following: %s\n", strings.Join([]string(PStatuses), ", "))
+	ErrInvalidProjectStatus = fmt.Errorf("Invalid project status.")
 )
 
 // Project contains information about a scanlation project, which has a human-readable name, a unique shorthand name,

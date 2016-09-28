@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -11,13 +12,15 @@ type ReleaseStatus string
 const (
 	RStatusReleased ReleaseStatus = "released"
 	RStatusDraft    ReleaseStatus = "draft"
+)
 
+var (
 	RStatuses = []ReleaseStatus{RStatusReleased, RStatusDraft}
 )
 
 // Errors pertaining to the data in a Release or operations on Releases.
 var (
-	ErrInvalidReleaseStatus = fmt.Errorf("Release status must be one of the following: %s\n", strings.Join([]string(RStatuses), ", "))
+	ErrInvalidReleaseStatus = fmt.Errorf("Invalid release status.")
 )
 
 // Release contains information about a release, which there are many of under a given Project.  It contains information
