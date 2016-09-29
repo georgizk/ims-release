@@ -25,4 +25,11 @@ func main() {
 		time.Now(),
 	}
 	fmt.Println("\nCreated test release\n", r)
+	page := models.Page{
+		"abc",
+		1,
+		"manga/chapters/rnrl/001.jpg",
+		time.Now(),
+	}
+	fmt.Println("\nCreated test page\n", page)
 }
