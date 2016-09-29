@@ -11,6 +11,7 @@ type ProjectStatus string
 // ProjectStatus pseudo-enum values
 const (
 	PStatusPublished ProjectStatus = "published"
+	PStatusOngoing   ProjectStatus = "ongoing"
 )
 
 var (
@@ -31,6 +32,19 @@ type Project struct {
 	Description string        `json:"description"`
 	Status      ProjectStatus `json:"status"`
 	CreatedAt   time.Time     `json:"createdAt"`
+}
+
+// NewProject constructs a brand new Project instance, with a default state lacking information about its (future)
+// position in a database.
+func NewProject(name, shorthand, description string) Project {
+	return Project{
+		"",
+		name,
+		shorthand,
+		description,
+		PStatusOngoing,
+		time.Now(),
+	}
 }
 
 // Validate checks that the "status" of the project is one of the accepted ProjectStatus values.

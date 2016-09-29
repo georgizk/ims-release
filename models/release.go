@@ -35,6 +35,19 @@ type Release struct {
 	ReleasedOn time.Time     `json:"releasedOn:`
 }
 
+// NewRelease constructs a brand new Release instance, with a default state lacking information its (future) position in
+// a database.
+func NewRelease(version int, chapterName string) Release {
+	return Release{
+		"",
+		chapterName,
+		version,
+		RStatusDraft,
+		"",
+		time.Now(), // TODO -Update the release time when the status changes
+	}
+}
+
 // Validate checks that the "status" of the project is one of the accepted ReleaseStatus values.
 func (r Release) Validate() error {
 	for _, status := range RStatuses {

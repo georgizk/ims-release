@@ -13,6 +13,18 @@ type Page struct {
 	CreatedAt time.Time `json:"createdAt"`
 }
 
+// NewPage constructs a brand new Project instance, with a default state lacking information about its (future)
+// position in a database.
+
+func NewPage(pageNum int, filePath string) Page {
+	return Page{
+		"",
+		pageNum,
+		filePath,
+		time.Now(),
+	}
+}
+
 // Validate currently doesn't perform any integrity checks.
 func (p Page) Validate() error {
 	return nil
