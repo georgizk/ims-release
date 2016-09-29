@@ -15,7 +15,7 @@ import (
 // to handle incoming requests to the appropriate endpoint using a subrouter with an
 // appropriate prefix, specified in main.
 func RegisterProjectHandlers(r *mux.Router, db *sql.DB, cfg *config.Config) {
-	r.HandleFunc("/projects", ListProjects(db, cfg)).Methods("GET")
+	r.HandleFunc("/", ListProjects(db, cfg)).Methods("GET")
 }
 
 // GET /projects
