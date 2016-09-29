@@ -1,0 +1,4 @@
+{
+  "address": "0.0.0.0:3000",
+  "imageDirectory": "./images"
+}
