@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -15,7 +16,11 @@ import (
 // to handle incoming requests to the appropriate endpoint using a subrouter with an
 // appropriate prefix, specified in main.
 func RegisterProjectHandlers(r *mux.Router, db *sql.DB, cfg *config.Config) {
-	r.HandleFunc("/", ListProjects(db, cfg)).Methods("GET")
+	r.HandleFunc("/", listProjects(db, cfg)).Methods("GET")
+	r.HandleFunc("/", createProject(db, cfg)).Methods("POST")
+	r.HandleFunc("/{projectID}", getProject(db, cfg)).Methods("GET")
+	r.HandleFunc("/{projectID}", updateProject(db, cfg)).Methods("PUT")
+	r.HandleFunc("/{projectID}", deleteProject(db, cfg)).Methods("DELETE")
 }
 
 // GET /projects
@@ -29,8 +34,10 @@ type listProjectsResponse struct {
 	Projects []models.Project `json:"projects"`
 }
 
-// ListProjects produces a list of all projects. It accepts
-func ListProjects(db *sql.DB, cfg *config.Config) http.HandlerFunc {
+// listProjects produces a list of all projects. It accepts an "ordering"
+// parameter, which can be either "newest" or "oldest" to specify which should
+// come first.
+func listProjects(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		request := listProjectsRequest{}
@@ -43,5 +50,131 @@ func ListProjects(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 		encoder := json.NewEncoder(w)
 		// TODO - List projects from the database
 		encoder.Encode(listProjectsResponse{nil, []models.Project{}})
+	}
+}
+
+// POST /projects
+
+type createProjectRequest struct {
+	Name        string               `json:"name"`
+	ProjectName string               `json:"projectName"`
+	Description string               `json:"description"`
+	Status      models.ProjectStatus `json:"status"`
+}
+
+type createProjectResponse struct {
+	Error   *string `json:"error"`
+	Success bool    `json:"success"`
+	Id      string  `json:"id,omitempty"`
+}
+
+// createProject creates a new project.
+func createProject(db *sql.DB, cfg *config.Config) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		request := createProjectRequest{}
+		decoder := json.NewDecoder(r.Body)
+		defer r.Body.Close()
+		decodeErr := decoder.Decode(&request)
+
+		encoder := json.NewEncoder(w)
+		if decodeErr != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			errMsg := "JSON format error or missing field detected."
+			encoder.Encode(createProjectResponse{&errMsg, false, ""})
+			return
+		}
+		// TODO - Insert the project into the DB and update its ID etc.
+		encoder.Encode(createProjectResponse{nil, true, "sampleID"})
+	}
+}
+
+// GET /projects/{projectId}
+
+type getProjectRequest struct {
+	Id string
+}
+
+type getProjectResponse struct {
+	Error       *string              `json:"error"`
+	Name        string               `json:"name"`
+	ProjectName string               `json:"projectName"`
+	Status      models.ProjectStatus `json:"status"`
+	Description string               `json:"description"`
+	CreatedAt   time.Time            `json:"createdAt"`
+}
+
+// getProject obtains information about a specific project.
+func getProject(db *sql.DB, cfg *config.Config) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		request := getProjectRequest{mux.Vars(r)["projectID"]}
+		request.Id = request.Id // Shutting up the linter
+
+		encoder := json.NewEncoder(w)
+		// TODO - Retrieve the project information from the database.
+		encoder.Encode(getProjectResponse{nil, "project", "prj1", models.PStatusOngoing, "A test project", time.Now()})
+	}
+}
+
+// PUT /projects/{projectId}
+
+type updateProjectRequest struct {
+	Id          string               // Provided from a URL path parameter
+	Name        string               `json:"name"`
+	ProjectName string               `json:"projectName"`
+	Status      models.ProjectStatus `json:"status"`
+	Description string               `json:"description"`
+}
+
+type updateProjectResponse struct {
+	Error   *string `json:"error"`
+	Success bool    `json:"success"`
+}
+
+// updateProject updates every field of an existing project with some supplied data.
+func updateProject(db *sql.DB, cfg *config.Config) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		request := updateProjectRequest{}
+		decoder := json.NewDecoder(r.Body)
+		defer r.Body.Close()
+		decodeErr := decoder.Decode(&request)
+		request.Id = mux.Vars(r)["projectID"]
+
+		encoder := json.NewEncoder(w)
+		if decodeErr != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			errMsg := "JSON format error or missing field detected."
+			encoder.Encode(updateProjectResponse{&errMsg, false})
+			return
+		}
+		// TODO - Update the project in the DB.
+		encoder.Encode(updateProjectResponse{nil, true})
+	}
+}
+
+// DELETE /projects/{projectId}
+
+type deleteProjectRequest struct {
+	Id string
+}
+
+type deleteProjectResponse struct {
+	Error   *string `json:"error"`
+	Success bool    `json:"success"`
+}
+
+// deleteProject removes an entire project from the database, along with
+// all of the releases under that project.
+func deleteProject(db *sql.DB, cfg *config.Config) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		request := deleteProjectRequest{mux.Vars(r)["projectID"]}
+		request.Id = request.Id // Shutting the linter up
+
+		encoder := json.NewEncoder(w)
+		// TODO - Delete the project in the DB.
+		encoder.Encode(deleteProjectResponse{nil, true})
 	}
 }
