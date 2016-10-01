@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -18,9 +19,9 @@ import (
 func RegisterProjectHandlers(r *mux.Router, db *sql.DB, cfg *config.Config) {
 	r.HandleFunc("/", listProjects(db, cfg)).Methods("GET")
 	r.HandleFunc("/", createProject(db, cfg)).Methods("POST")
-	r.HandleFunc("/{projectID}", getProject(db, cfg)).Methods("GET")
-	r.HandleFunc("/{projectID}", updateProject(db, cfg)).Methods("PUT")
-	r.HandleFunc("/{projectID}", deleteProject(db, cfg)).Methods("DELETE")
+	r.HandleFunc("/{projectId}", getProject(db, cfg)).Methods("GET")
+	r.HandleFunc("/{projectId}", updateProject(db, cfg)).Methods("PUT")
+	r.HandleFunc("/{projectId}", deleteProject(db, cfg)).Methods("DELETE")
 }
 
 // GET /projects
@@ -40,12 +41,11 @@ type listProjectsResponse struct {
 func listProjects(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		request := listProjectsRequest{}
+		request := listProjectsRequest{"newest"}
 		orderings, found := r.URL.Query()["ordering"]
-		if !found {
-			orderings = []string{"newest"}
+		if found {
+			request.Ordering = orderings[0]
 		}
-		request.Ordering = orderings[0]
 
 		encoder := json.NewEncoder(w)
 		// TODO - List projects from the database
@@ -65,7 +65,7 @@ type createProjectRequest struct {
 type createProjectResponse struct {
 	Error   *string `json:"error"`
 	Success bool    `json:"success"`
-	Id      string  `json:"id,omitempty"`
+	Id      int     `json:"id"`
 }
 
 // createProject creates a new project.
@@ -81,18 +81,18 @@ func createProject(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 		if decodeErr != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			errMsg := "JSON format error or missing field detected."
-			encoder.Encode(createProjectResponse{&errMsg, false, ""})
+			encoder.Encode(createProjectResponse{&errMsg, false, 0})
 			return
 		}
 		// TODO - Insert the project into the DB and update its ID etc.
-		encoder.Encode(createProjectResponse{nil, true, "sampleID"})
+		encoder.Encode(createProjectResponse{nil, true, 1})
 	}
 }
 
 // GET /projects/{projectId}
 
 type getProjectRequest struct {
-	Id string
+	Id int
 }
 
 type getProjectResponse struct {
@@ -108,10 +108,17 @@ type getProjectResponse struct {
 func getProject(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		request := getProjectRequest{mux.Vars(r)["projectID"]}
-		request.Id = request.Id // Shutting up the linter
+		request := getProjectRequest{}
+		projectId, parseErr := strconv.Atoi(mux.Vars(r)["projectId"])
 
 		encoder := json.NewEncoder(w)
+		if parseErr != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			errMsg := "projectId must be an integer ID."
+			encoder.Encode(getProjectResponse{&errMsg, "", "", "", "", time.Now()})
+			return
+		}
+		request.Id = projectId
 		// TODO - Retrieve the project information from the database.
 		encoder.Encode(getProjectResponse{nil, "project", "prj1", models.PStatusOngoing, "A test project", time.Now()})
 	}
@@ -120,7 +127,7 @@ func getProject(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 // PUT /projects/{projectId}
 
 type updateProjectRequest struct {
-	Id          string               // Provided from a URL path parameter
+	Id          int                  // Provided from a URL path parameter
 	Name        string               `json:"name"`
 	ProjectName string               `json:"projectName"`
 	Status      models.ProjectStatus `json:"status"`
@@ -137,12 +144,19 @@ func updateProject(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		request := updateProjectRequest{}
+		projectId, parseErr := strconv.Atoi(mux.Vars(r)["projectId"])
 		decoder := json.NewDecoder(r.Body)
 		defer r.Body.Close()
 		decodeErr := decoder.Decode(&request)
-		request.Id = mux.Vars(r)["projectID"]
 
 		encoder := json.NewEncoder(w)
+		if parseErr != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			errMsg := "projectId must be an integer ID."
+			encoder.Encode(updateProjectResponse{&errMsg, false})
+			return
+		}
+		request.Id = projectId
 		if decodeErr != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			errMsg := "JSON format error or missing field detected."
@@ -157,7 +171,7 @@ func updateProject(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 // DELETE /projects/{projectId}
 
 type deleteProjectRequest struct {
-	Id string
+	Id int
 }
 
 type deleteProjectResponse struct {
@@ -170,10 +184,18 @@ type deleteProjectResponse struct {
 func deleteProject(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		request := deleteProjectRequest{mux.Vars(r)["projectID"]}
+		request := deleteProjectRequest{}
+		projectId, parseErr := strconv.Atoi(mux.Vars(r)["projectId"])
 		request.Id = request.Id // Shutting the linter up
 
 		encoder := json.NewEncoder(w)
+		if parseErr != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			errMsg := "projectId must be an integer ID."
+			encoder.Encode(deleteProjectResponse{&errMsg, false})
+			return
+		}
+		request.Id = projectId
 		// TODO - Delete the project in the DB.
 		encoder.Encode(deleteProjectResponse{nil, true})
 	}
