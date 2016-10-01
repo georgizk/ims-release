@@ -322,6 +322,7 @@ Name | Type | Description
 projectId | integer | The unique id of the project under which the release was created
 releaseId | integer | The unique id of the release
 page | string | The page number
+data | string | The base64-encoded raw image data
 
 #### Release
 
