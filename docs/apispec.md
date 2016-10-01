@@ -245,6 +245,7 @@ groupName | string | "ims"
 checksum | string | The hex encoding of the sha256 checksum of the release's zip file
 version | integer | The release version number
 status | string | The status of the release
+releasedOn | string | The date that the release was made with its current status
 
 ### Update information about a release
 
