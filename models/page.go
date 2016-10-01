@@ -8,7 +8,7 @@ import (
 // path to the page's image file on disk.
 type Page struct {
 	Id        string    `json:"id"`
-	Number    int       `json:"page"`
+	Number    string    `json:"page"`
 	Location  string    `json:"-"` // Omit from JSON encodings
 	CreatedAt time.Time `json:"createdAt"`
 }
@@ -16,7 +16,7 @@ type Page struct {
 // NewPage constructs a brand new Project instance, with a default state lacking information about its (future)
 // position in a database.
 
-func NewPage(pageNum int, filePath string) Page {
+func NewPage(pageNum, filePath string) Page {
 	return Page{
 		"",
 		pageNum,

@@ -307,7 +307,7 @@ releaseId | integer | The unique id of the release
 
 Name | Type | Description
 -----|------|------------
-pages | `[{"projectName": string, "chapter": string, "version": integer, "page": integer, "ext": string}]`| An array of objects describing each of the pages part of the release
+pages | `[{"projectName": string, "chapter": string, "version": integer, "page": string}]`| An array of objects describing each of the pages part of the release
 
 ### Add a new page to a release
 
