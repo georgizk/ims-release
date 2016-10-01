@@ -6,6 +6,7 @@ import (
 
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -76,6 +77,7 @@ type createReleaseResponse struct {
 	Id      int     `json:"id"`
 }
 
+// createRelease inserts a new release into the database.
 func createRelease(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
