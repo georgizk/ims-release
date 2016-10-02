@@ -22,3 +22,17 @@ type Model interface {
 	Update(*sql.DB) error
 	Delete(*sql.DB) error
 }
+
+// InitDB initializes all of the database tables, only creating them if they do not already exist.
+func InitDB(db *sql.DB) error {
+	_, err := db.Exec(QInitTableProjects)
+	if err != nil {
+		return err
+	}
+	_, err = db.Exec(QInitTableReleases)
+	if err != nil {
+		return err
+	}
+	_, err = db.Exec(QInitTablePage)
+	return err
+}

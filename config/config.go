@@ -16,6 +16,7 @@ const ConfigFilePath string = "./config/config.json"
 type Config struct {
 	BindAddress    string `json:"address"`
 	ImageDirectory string `json:"imageDirectory"`
+	Database       string `json:"database"`
 }
 
 // MustLoad attempts to load a Config from a specified path and panics if it
