@@ -14,10 +14,12 @@ var (
 // Database queries for operations on Pages.
 const (
 	QInitTablePage string = `create table if not exists pages (
-		id int primary key,
+		id int not null primary key,
 		number varchar(255),
 		location varchar(255),
-		created_at timestamp
+		created_at timestamp,
+		release_id int,
+		foreign key(release_id) references releases(id)
 );`
 
 	QSavePage string = `insert into pages (
@@ -53,7 +55,6 @@ type Page struct {
 
 // NewPage constructs a brand new Project instance, with a default state lacking information about its (future)
 // position in a database.
-
 func NewPage(pageNum, filePath string) Page {
 	return Page{
 		0,

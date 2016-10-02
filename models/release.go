@@ -28,12 +28,14 @@ var (
 // Database queries for operations on Releases.
 const (
 	QInitTableReleases string = `create table if not exists releases (
-		id int primary key,
+		id int not null primary key,
 		chapter varchar(255),
 		version int,
 		status varchar(255),
 		checksum varchar(255),
-		released_on timestamp
+		released_on timestamp,
+		project_id int,
+		foreign key(project_id) references projects(id)
 );`
 
 	QSaveRelease string = `insert into releases (

@@ -23,7 +23,7 @@ var (
 // Database queries for operations on Projects.
 const (
 	QInitTableProjects string = `create table if not exists projects (
-		id int primary key,
+		id int not null primary key,
 		name varchar(255),
 		project_name varchar(255) unique,
 		description text,
