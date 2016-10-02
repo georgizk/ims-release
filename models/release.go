@@ -48,7 +48,7 @@ where id = $1;`
 
 	QDeleteRelease string = `delete from releases where id = $1;`
 
-	QListRelease string = `select (
+	QListReleases string = `select (
 		id, chapter, version, status, checksum, released_on
 ) from releases;`
 
@@ -101,7 +101,7 @@ func FindRelease(id int, db *sql.DB) (Release, error) {
 // ListReleases attempts to obtain a list of all of the releases in the database.
 func ListReleases(db *sql.DB) ([]Release, error) {
 	releases := []Release{}
-	rows, err := db.Query(QListRelease)
+	rows, err := db.Query(QListReleases)
 	if err != nil {
 		return []Release{}, err
 	}
