@@ -1,6 +1,8 @@
 package models
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 )
@@ -18,6 +20,44 @@ var (
 	PStatuses = []ProjectStatus{PStatusPublished}
 )
 
+// Project-related errors
+var (
+	ErrNoSuchProject = errors.New("Could not find project.")
+)
+
+// Database queries for operations on Projects.
+const (
+	QInitTableProjects string = `create table if not exists projects (
+		id int primary key,
+		name varchar(255),
+		project_name varchar(255) unique,
+		description text,
+		status varchar(255),
+		created_at timestamp
+);`
+
+	QSaveProject string = `insert into projects (
+		name, project_name, description, status, created_at
+) values (
+		$1, $2, $3, $4, NOW()
+);`
+
+	QUpdateProject string = `update projects set
+name = $2, project_name = $3, description = $4, status = $5
+where id = $1;`
+
+	QDeleteProject string = `delete from projects where id = $1;`
+
+	QListProjects string = `select (
+		id, name, project_name, description, status, created_at
+) from projects;`
+
+	QFindProject string = `select (
+		name, project_name, description, status, created_at
+) from projects
+where id = $1;`
+)
+
 // Errors pertaining to the data in a Project or operations on Projects.
 var (
 	ErrInvalidProjectStatus = fmt.Errorf("Invalid project status.")
@@ -26,7 +66,7 @@ var (
 // Project contains information about a scanlation project, which has a human-readable name, a unique shorthand name,
 // and a publishing status amongst other things.
 type Project struct {
-	Id          string        `json:"id"`
+	Id          int           `json:"id"`
 	Name        string        `json:"name"`
 	Shorthand   string        `json:"projectName"`
 	Description string        `json:"description"`
@@ -38,7 +78,7 @@ type Project struct {
 // position in a database.
 func NewProject(name, shorthand, description string) Project {
 	return Project{
-		"",
+		0,
 		name,
 		shorthand,
 		description,
@@ -47,12 +87,70 @@ func NewProject(name, shorthand, description string) Project {
 	}
 }
 
+// FindProject attempts to lookup a project by ID.
+func FindProject(id int, db *sql.DB) (Project, error) {
+	p := Project{}
+	row := db.QueryRow(QFindProject, id)
+	if row == nil {
+		return Project{}, ErrNoSuchProject
+	}
+	err := row.Scan(&p.Name, &p.Shorthand, &p.Description, &p.Status, &p.CreatedAt)
+	if err != nil {
+		return Project{}, err
+	}
+	p.Id = id
+	return p, nil
+}
+
+// ListProjects attempts to obtain a list of all of the projects in the database.
+func ListProjects(db *sql.DB) ([]Project, error) {
+	projects := []Project{}
+	rows, err := db.Query(QListProjects)
+	if err != nil {
+		return []Project{}, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id int
+		var name, shorthand, description, status string
+		var created time.Time
+		err = rows.Scan(&id, &name, &shorthand, &description, &status, &created)
+		projects = append(projects, Project{id, name, shorthand, description, ProjectStatus(status), created})
+	}
+	return projects, err
+}
+
 // Validate checks that the "status" of the project is one of the accepted ProjectStatus values.
-func (p Project) Validate() error {
+func (p *Project) Validate() error {
 	for _, status := range PStatuses {
 		if p.Status == status {
 			return nil
 		}
 	}
 	return ErrInvalidProjectStatus
+}
+
+// Save inserts the project into the database and updates its Id field.
+func (p *Project) Save(db *sql.DB) error {
+	_, err := db.Exec(QSaveProject, p.Name, p.Shorthand, p.Description, p.Status, p.CreatedAt)
+	if err != nil {
+		return err
+	}
+	row := db.QueryRow(QLastInsertID)
+	if row == nil {
+		return ErrCouldNotGetID
+	}
+	return row.Scan(&p.Id)
+}
+
+// Update modifies all of the fields of a Project in place with whatever is currently in the struct.
+func (p *Project) Update(db *sql.DB) error {
+	_, err := db.Exec(QUpdateProject, p.Id, p.Name, p.Shorthand, p.Description, p.Status)
+	return err
+}
+
+// Delete removes the Project from the database.
+func (p *Project) Delete(db *sql.DB) error {
+	_, err := db.Exec(QDeleteProject, p.Id)
+	return err
 }
