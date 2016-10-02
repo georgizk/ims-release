@@ -82,7 +82,7 @@ func NewRelease(version int, chapterName string) Release {
 		version,
 		RStatusDraft,
 		"",
-		time.Now(), // TODO -Update the release time when the status changes
+		time.Now(),
 	}
 }
 
@@ -148,7 +148,9 @@ func (r *Release) Save(db *sql.DB) error {
 
 // Update modifies all of the fields of a Release in place with whatever is currently in the struct.
 func (r *Release) Update(db *sql.DB) error {
-	_, err := db.Exec(QUpdateRelease, r.Id, r.Chapter, r.Version, r.Status, r.Checksum, time.Now())
+	now := time.Now()
+	_, err := db.Exec(QUpdateRelease, r.Id, r.Chapter, r.Version, r.Status, r.Checksum, now)
+	r.ReleasedOn = now
 	return err
 }
 
