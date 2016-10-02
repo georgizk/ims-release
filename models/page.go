@@ -36,7 +36,8 @@ where id = $1;`
 
 	QListPages string = `select (
 		id, number, location, created_at
-) from pages;`
+) from pages
+where release_id = $1;`
 
 	QFindPage string = `select (
 		number, location, created_at
@@ -80,9 +81,9 @@ func FindPage(id int, db *sql.DB) (Page, error) {
 }
 
 // ListPages attempts to obtain a list of all pages
-func ListPages(db *sql.DB) ([]Page, error) {
+func ListPages(releaseId int, db *sql.DB) ([]Page, error) {
 	pages := []Page{}
-	rows, err := db.Query(QListPages)
+	rows, err := db.Query(QListPages, releaseId)
 	if err != nil {
 		return []Page{}, err
 	}
