@@ -147,7 +147,20 @@ func (p *Project) Update(db *sql.DB) error {
 
 // Delete removes the Project and all associated releases from the database.
 func (p *Project) Delete(db *sql.DB) error {
-	// TODO - Delete all associated releases.
+	releases, listErr := ListReleases(p.Id, db)
+	var deleteErr error
+	for _, release := range releases {
+		dErr := release.Delete(db)
+		if dErr != nil {
+			deleteErr = dErr
+		}
+	}
 	_, err := db.Exec(QDeleteProject, p.Id)
-	return err
+	if err != nil {
+		return err
+	}
+	if listErr != nil {
+		return listErr
+	}
+	return deleteErr
 }
