@@ -3,6 +3,7 @@ package models
 import (
 	"database/sql"
 	"errors"
+	"os"
 	"time"
 )
 
@@ -128,7 +129,10 @@ func (p *Page) Update(db *sql.DB) error {
 
 // Delete removes the Page from the database and deletes the page image from disk.
 func (p *Page) Delete(db *sql.DB) error {
-	// TODO - Delete the image from disk.
 	_, err := db.Exec(QDeletePage, p.Id)
-	return err
+	rmErr := os.Remove(p.Location)
+	if err != nil {
+		return err
+	}
+	return rmErr
 }
