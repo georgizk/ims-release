@@ -156,7 +156,20 @@ func (r *Release) Update(db *sql.DB) error {
 
 // Delete removes the Release and all associated pages from the database.
 func (r *Release) Delete(db *sql.DB) error {
-	// TODO - Delete all associated pages.
+	pages, listErr := ListPages(r.Id, db)
+	var deleteErr error
+	for _, page := range pages {
+		dErr := page.Delete(db)
+		if dErr != nil {
+			deleteErr = dErr
+		}
+	}
 	_, err := db.Exec(QDeleteRelease, r.Id)
-	return err
+	if err != nil {
+		return err
+	}
+	if listErr != nil {
+		return listErr
+	}
+	return deleteErr
 }
