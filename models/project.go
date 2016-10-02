@@ -145,8 +145,9 @@ func (p *Project) Update(db *sql.DB) error {
 	return err
 }
 
-// Delete removes the Project from the database.
+// Delete removes the Project and all associated releases from the database.
 func (p *Project) Delete(db *sql.DB) error {
+	// TODO - Delete all associated releases.
 	_, err := db.Exec(QDeleteProject, p.Id)
 	return err
 }
