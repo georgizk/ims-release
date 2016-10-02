@@ -20,11 +20,6 @@ var (
 	PStatuses = []ProjectStatus{PStatusPublished}
 )
 
-// Project-related errors
-var (
-	ErrNoSuchProject = errors.New("Could not find project.")
-)
-
 // Database queries for operations on Projects.
 const (
 	QInitTableProjects string = `create table if not exists projects (
@@ -61,6 +56,7 @@ where id = $1;`
 // Errors pertaining to the data in a Project or operations on Projects.
 var (
 	ErrInvalidProjectStatus = fmt.Errorf("Invalid project status.")
+	ErrNoSuchProject        = errors.New("Could not find project.")
 )
 
 // Project contains information about a scanlation project, which has a human-readable name, a unique shorthand name,
