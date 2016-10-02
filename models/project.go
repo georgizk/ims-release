@@ -34,7 +34,7 @@ const (
 	QSaveProject string = `insert into projects (
 		name, project_name, description, status, created_at
 ) values (
-		$1, $2, $3, $4, NOW()
+		$1, $2, $3, $4, $5
 );`
 
 	QUpdateProject string = `update projects set
