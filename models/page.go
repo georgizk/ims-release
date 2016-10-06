@@ -129,7 +129,7 @@ func (p *Page) Save(db *sql.DB) error {
 
 // Update modifies all of the fields of a Page in place with whatever is currently in the struct.
 func (p *Page) Update(db *sql.DB) error {
-	_, err := db.Exec(QUpdatePage, p.Id, p.Number, p.Location, p.CreatedAt)
+	_, err := db.Exec(QUpdatePage, p.Number, p.Location, p.CreatedAt, p.Id)
 	return err
 }
 

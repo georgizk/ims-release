@@ -160,7 +160,7 @@ func (p *Project) Update(db *sql.DB) error {
 	if validErr != nil {
 		return validErr
 	}
-	_, err := db.Exec(QUpdateProject, p.Id, p.Name, p.Shorthand, p.Description, string(p.Status))
+	_, err := db.Exec(QUpdateProject, p.Name, p.Shorthand, p.Description, string(p.Status), p.Id)
 	return err
 }
 
