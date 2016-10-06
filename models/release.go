@@ -51,21 +51,21 @@ where id = ?;`
 
 	QDeleteRelease string = `delete from releases where id = ?;`
 
-	QListReleasesDesc string = `select (
-		id, chapter, version, status, checksum, released_on
-) from releases
+	QListReleasesDesc string = `select
+id, chapter, version, status, checksum, released_on
+from releases
 where project_id = ?
 order by released_on desc;`
 
-	QListReleasesAsc string = `select (
-		id, chapter, version, status, checksum, released_on
-) from releases
+	QListReleasesAsc string = `select
+id, chapter, version, status, checksum, released_on
+from releases
 where project_id = ?
 order by released_on asc;`
 
-	QFindRelease string = `select (
-		chapter, version, status, checksum, released_on
-) from releases
+	QFindRelease string = `select
+chapter, version, status, checksum, released_on
+from releases
 where id = ?;`
 )
 

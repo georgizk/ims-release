@@ -44,19 +44,17 @@ where id = ?;`
 
 	QDeleteProject string = `delete from projects where id = ?;`
 
-	QListProjectsDesc string = `select (
-		id, name, project_name, description, status, created_at
-) from projects
+	QListProjectsDesc string = `select id, name, project_name, description, status, created_at
+from projects
 order by created_at desc;`
 
-	QListProjectsAsc string = `select (
-		id, name, project_name, description, status, created_at
-) from projects
+	QListProjectsAsc string = `select id, name, project_name, description, status, created_at
+from projects
 order by created_at asc;`
 
-	QFindProject string = `select (
-		name, project_name, description, status, created_at
-) from projects
+	QFindProject string = `select
+name, project_name, description, status, created_at
+from projects
 where id = ?;`
 )
 
@@ -162,7 +160,7 @@ func (p *Project) Update(db *sql.DB) error {
 
 // Delete removes the Project and all associated releases from the database.
 func (p *Project) Delete(db *sql.DB) error {
-	releases, listErr := ListReleases(p.Id, db)
+	releases, listErr := ListReleases(p.Id, "newest", db)
 	var deleteErr error
 	for _, release := range releases {
 		dErr := release.Delete(db)
