@@ -241,7 +241,18 @@ func deleteProject(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 			return
 		}
 		request.Id = projectId
-		// TODO - Delete the project in the DB.
+		// We could lookup the project before deleting it but we might as well
+		// leave that work to the database.
+		project := models.NewProject("", "", "")
+		project.Id = request.Id
+		deleteErr := project.Delete(db)
+		if deleteErr != nil {
+			fmt.Println("[---] Delete error:", deleteErr)
+			w.WriteHeader(http.StatusInternalServerError)
+			errMsg := "Could not delete the specified project. Please check that the ID is valid."
+			encoder.Encode(deleteProjectResponse{&errMsg, false})
+			return
+		}
 		encoder.Encode(deleteProjectResponse{nil, true})
 	}
 }
