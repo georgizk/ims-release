@@ -91,14 +91,16 @@ func NewProject(name, shorthand, description string) Project {
 // FindProject attempts to lookup a project by ID.
 func FindProject(id int, db *sql.DB) (Project, error) {
 	p := Project{}
+	var status string
 	row := db.QueryRow(QFindProject, id)
 	if row == nil {
 		return Project{}, ErrNoSuchProject
 	}
-	err := row.Scan(&p.Name, &p.Shorthand, &p.Description, &p.Status, &p.CreatedAt)
+	err := row.Scan(&p.Name, &p.Shorthand, &p.Description, &status, &p.CreatedAt)
 	if err != nil {
 		return Project{}, err
 	}
+	p.Status = ProjectStatus(status)
 	p.Id = id
 	return p, nil
 }
