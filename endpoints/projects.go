@@ -49,8 +49,15 @@ func listProjects(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 		}
 
 		encoder := json.NewEncoder(w)
-		// TODO - List projects from the database
-		encoder.Encode(listProjectsResponse{nil, []models.Project{}})
+		projects, listErr := models.ListProjects(request.Ordering, db)
+		if listErr != nil {
+			fmt.Println("[---] Listing error:", listErr)
+			w.WriteHeader(http.StatusInternalServerError)
+			errMsg := "Could not obtain a list of projects. Please try again later."
+			encoder.Encode(listProjectsResponse{&errMsg, []models.Project{}})
+			return
+		}
+		encoder.Encode(listProjectsResponse{nil, projects})
 	}
 }
 
