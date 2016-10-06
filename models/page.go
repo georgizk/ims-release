@@ -39,7 +39,8 @@ where id = ?;`
 	QListPages string = `select (
 		id, number, location, created_at
 ) from pages
-where release_id = ?;`
+where release_id = ?
+order by number asc;`
 
 	QFindPage string = `select (
 		number, location, created_at

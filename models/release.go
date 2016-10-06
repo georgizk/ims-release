@@ -51,10 +51,17 @@ where id = ?;`
 
 	QDeleteRelease string = `delete from releases where id = ?;`
 
-	QListReleases string = `select (
+	QListReleasesDesc string = `select (
 		id, chapter, version, status, checksum, released_on
 ) from releases
-where project_id = ?;`
+where project_id = ?
+order by released_on desc;`
+
+	QListReleasesAsc string = `select (
+		id, chapter, version, status, checksum, released_on
+) from releases
+where project_id = ?
+order by released_on asc;`
 
 	QFindRelease string = `select (
 		chapter, version, status, checksum, released_on
@@ -103,9 +110,13 @@ func FindRelease(id int, db *sql.DB) (Release, error) {
 }
 
 // ListReleases attempts to obtain a list of all of the releases in the database.
-func ListReleases(projectId int, db *sql.DB) ([]Release, error) {
+func ListReleases(projectId int, ordering string, db *sql.DB) ([]Release, error) {
 	releases := []Release{}
-	rows, err := db.Query(QListReleases, projectId)
+	query := QListReleasesDesc
+	if ordering == "oldest" {
+		query = QListReleasesAsc
+	}
+	rows, err := db.Query(query, projectId)
 	if err != nil {
 		return []Release{}, err
 	}

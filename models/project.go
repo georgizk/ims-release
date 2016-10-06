@@ -44,9 +44,15 @@ where id = ?;`
 
 	QDeleteProject string = `delete from projects where id = ?;`
 
-	QListProjects string = `select (
+	QListProjectsDesc string = `select (
 		id, name, project_name, description, status, created_at
-) from projects;`
+) from projects
+order by created_at desc;`
+
+	QListProjectsAsc string = `select (
+		id, name, project_name, description, status, created_at
+) from projects
+order by created_at asc;`
 
 	QFindProject string = `select (
 		name, project_name, description, status, created_at
@@ -100,9 +106,13 @@ func FindProject(id int, db *sql.DB) (Project, error) {
 }
 
 // ListProjects attempts to obtain a list of all of the projects in the database.
-func ListProjects(db *sql.DB) ([]Project, error) {
+func ListProjects(ordering string, db *sql.DB) ([]Project, error) {
 	projects := []Project{}
-	rows, err := db.Query(QListProjects)
+	query := QListProjectsDesc
+	if ordering == "oldest" {
+		query = QListProjectsAsc
+	}
+	rows, err := db.Query(query)
 	if err != nil {
 		return []Project{}, err
 	}
