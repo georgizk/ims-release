@@ -129,6 +129,10 @@ func (p *Project) Validate() error {
 
 // Save inserts the project into the database and updates its Id field.
 func (p *Project) Save(db *sql.DB) error {
+	validErr := p.Validate()
+	if validErr != nil {
+		return validErr
+	}
 	_, err := db.Exec(QSaveProject, p.Name, p.Shorthand, p.Description, string(p.Status), p.CreatedAt)
 	if err != nil {
 		return err

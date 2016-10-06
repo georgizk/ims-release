@@ -135,6 +135,10 @@ func (r *Release) Validate() error {
 
 // Save inserts the release into the database and updates its Id field.
 func (r *Release) Save(db *sql.DB) error {
+	validErr := r.Validate()
+	if validErr != nil {
+		return validErr
+	}
 	// TODO - Where should we compute checksums?
 	_, err := db.Exec(QSaveRelease, r.Chapter, r.Version, r.Status, r.Checksum, r.ReleasedOn)
 	if err != nil {

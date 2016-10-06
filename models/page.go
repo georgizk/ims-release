@@ -110,6 +110,10 @@ func (p Page) Validate() error {
 
 // Save inserts the page into the database and updates its Id field.
 func (p *Page) Save(db *sql.DB) error {
+	validErr := p.Validate()
+	if validErr != nil {
+		return validErr
+	}
 	// TODO - Make sure to save image data to disk before saving the Page.
 	_, err := db.Exec(QSavePage, p.Number, p.Location, p.CreatedAt)
 	if err != nil {
