@@ -23,25 +23,26 @@ var (
 // Database queries for operations on Projects.
 const (
 	QInitTableProjects string = `create table if not exists projects (
-		id int not null primary key,
+		id int not null auto_increment,
 		name varchar(255),
 		project_name varchar(255) unique,
 		description text,
 		status varchar(255),
-		created_at timestamp
+		created_at timestamp,
+		primary key(id)
 );`
 
 	QSaveProject string = `insert into projects (
 		name, project_name, description, status, created_at
 ) values (
-		$1, $2, $3, $4, $5
+		?, ?, ?, ?, ?
 );`
 
 	QUpdateProject string = `update projects set
-name = $2, project_name = $3, description = $4, status = $5
-where id = $1;`
+name = ?, project_name = ?, description = ?, status = ?
+where id = ?;`
 
-	QDeleteProject string = `delete from projects where id = $1;`
+	QDeleteProject string = `delete from projects where id = ?;`
 
 	QListProjects string = `select (
 		id, name, project_name, description, status, created_at
@@ -50,7 +51,7 @@ where id = $1;`
 	QFindProject string = `select (
 		name, project_name, description, status, created_at
 ) from projects
-where id = $1;`
+where id = ?;`
 )
 
 // Errors pertaining to the data in a Project or operations on Projects.
@@ -128,7 +129,7 @@ func (p *Project) Validate() error {
 
 // Save inserts the project into the database and updates its Id field.
 func (p *Project) Save(db *sql.DB) error {
-	_, err := db.Exec(QSaveProject, p.Name, p.Shorthand, p.Description, p.Status, p.CreatedAt)
+	_, err := db.Exec(QSaveProject, p.Name, p.Shorthand, p.Description, string(p.Status), p.CreatedAt)
 	if err != nil {
 		return err
 	}

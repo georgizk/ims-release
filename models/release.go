@@ -28,37 +28,38 @@ var (
 // Database queries for operations on Releases.
 const (
 	QInitTableReleases string = `create table if not exists releases (
-		id int not null primary key,
+		id int not null auto_increment,
 		chapter varchar(255),
 		version int,
 		status varchar(255),
 		checksum varchar(255),
 		released_on timestamp,
 		project_id int,
-		foreign key(project_id) references projects(id)
+		foreign key(project_id) references projects(id),
+		primary key(id)
 );`
 
 	QSaveRelease string = `insert into releases (
 		chapter, version, status, checksum, released_on
 ) values (
-		$1, $2, $3, $4, $5
+		?, ?, ?, ?, ?
 );`
 
 	QUpdateRelease string = `update releases set
-chapter = $2, version = $3, status = $4, checksum = $5, released_on = $6
-where id = $1;`
+chapter = ?, version = ?, status = ?, checksum = ?, released_on = ?
+where id = ?;`
 
-	QDeleteRelease string = `delete from releases where id = $1;`
+	QDeleteRelease string = `delete from releases where id = ?;`
 
 	QListReleases string = `select (
 		id, chapter, version, status, checksum, released_on
 ) from releases
-where project_id = $1;`
+where project_id = ?;`
 
 	QFindRelease string = `select (
 		chapter, version, status, checksum, released_on
 ) from releases
-where id = $1;`
+where id = ?;`
 )
 
 // Release contains information about a release, which there are many of under a given Project.  It contains information

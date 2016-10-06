@@ -15,35 +15,36 @@ var (
 // Database queries for operations on Pages.
 const (
 	QInitTablePage string = `create table if not exists pages (
-		id int not null primary key,
+		id int not null auto_increment,
 		number varchar(255),
 		location varchar(255),
 		created_at timestamp,
 		release_id int,
-		foreign key(release_id) references releases(id)
+		foreign key(release_id) references releases(id),
+		primary key(id)
 );`
 
 	QSavePage string = `insert into pages (
 		number, location, created_at
 ) values (
-		$1, $2, $3
+		?, ?, ?
 );`
 
 	QUpdatePage string = `update pages set
-number = $2, location = $3, created_at = $4
-where id = $1;`
+number = ?, location = ?, created_at = ?
+where id = ?;`
 
-	QDeletePage string = `delete from pages where id = $1;`
+	QDeletePage string = `delete from pages where id = ?;`
 
 	QListPages string = `select (
 		id, number, location, created_at
 ) from pages
-where release_id = $1;`
+where release_id = ?;`
 
 	QFindPage string = `select (
 		number, location, created_at
 ) from pages
-where id = $1;`
+where id = ?;`
 )
 
 // Page contains information about a single page of manga. Most important is its page number and location, which is the
