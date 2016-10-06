@@ -71,6 +71,7 @@ Whichever works for your system.  Then, connect to your database server with roo
 sudo mysql # This will bring you to the mysql prompt, prefixed by "mysql>"
 mysql> create database testing;
 mysql> grant all privileges on testing.* to 'tester'@'localhost' identified by 'password1';
+mysql> set global sql_mode = 'NO_ENGINE_SUBSTITUTION';
 ```
 
 #### Config
