@@ -6,6 +6,7 @@ import (
 
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -79,13 +80,23 @@ func createProject(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 
 		encoder := json.NewEncoder(w)
 		if decodeErr != nil {
+			fmt.Println("[---] Decode error:", decodeErr)
 			w.WriteHeader(http.StatusBadRequest)
 			errMsg := "JSON format error or missing field detected."
-			encoder.Encode(createProjectResponse{&errMsg, false, 0})
+			encoder.Encode(createProjectResponse{&errMsg, false, -1})
 			return
 		}
-		// TODO - Insert the project into the DB and update its ID etc.
-		encoder.Encode(createProjectResponse{nil, true, 1})
+		project := models.NewProject(request.Name, request.ProjectName, request.Description)
+		project.Status = request.Status
+		insertErr := project.Save(db)
+		if insertErr != nil {
+			fmt.Println("[---] Insert error:", insertErr)
+			w.WriteHeader(http.StatusInternalServerError)
+			errMsg := "Could not create project. Try again later, or with a different projectName."
+			encoder.Encode(createProjectResponse{&errMsg, false, -1})
+			return
+		}
+		encoder.Encode(createProjectResponse{nil, true, project.Id})
 	}
 }
 
