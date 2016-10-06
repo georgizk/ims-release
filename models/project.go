@@ -17,7 +17,7 @@ const (
 )
 
 var (
-	PStatuses = []ProjectStatus{PStatusPublished}
+	PStatuses = []ProjectStatus{PStatusPublished, PStatusOngoing}
 )
 
 // Database queries for operations on Projects.
@@ -156,7 +156,11 @@ func (p *Project) Save(db *sql.DB) error {
 
 // Update modifies all of the fields of a Project in place with whatever is currently in the struct.
 func (p *Project) Update(db *sql.DB) error {
-	_, err := db.Exec(QUpdateProject, p.Id, p.Name, p.Shorthand, p.Description, p.Status)
+	validErr := p.Validate()
+	if validErr != nil {
+		return validErr
+	}
+	_, err := db.Exec(QUpdateProject, p.Id, p.Name, p.Shorthand, p.Description, string(p.Status))
 	return err
 }
 
