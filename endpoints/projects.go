@@ -195,7 +195,20 @@ func updateProject(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 			encoder.Encode(updateProjectResponse{&errMsg, false})
 			return
 		}
-		// TODO - Update the project in the DB.
+		// We could pull the existing project from the DB and update the fields, but there
+		// isn't really point in doing that when we know the ID we want to set and the query
+		// will filter for us anyway.
+		project := models.NewProject(request.Name, request.ProjectName, request.Description)
+		project.Id = request.Id
+		project.Status = request.Status
+		updateErr := project.Update(db)
+		if updateErr != nil {
+			fmt.Println("[---] Update error:", updateErr)
+			w.WriteHeader(http.StatusBadRequest)
+			errMsg := "Could not update specified project. Please ensure the ID and status are correct."
+			encoder.Encode(updateProjectResponse{&errMsg, false})
+			return
+		}
 		encoder.Encode(updateProjectResponse{nil, true})
 	}
 }
