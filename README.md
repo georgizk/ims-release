@@ -82,7 +82,7 @@ The last thing to do is to make sure your `config/config.json` file has the righ
 {
   "address": "0.0.0.0:3000",
   "imageDirectory": "./images",
-  "database": "tester:password1@/testing"
+  "database": "tester:password1@/testing?parseTime=true"
 }
 ```
 
