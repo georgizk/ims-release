@@ -137,8 +137,22 @@ func getProject(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 			return
 		}
 		request.Id = projectId
-		// TODO - Retrieve the project information from the database.
-		encoder.Encode(getProjectResponse{nil, "project", "prj1", models.PStatusOngoing, "A test project", time.Now()})
+		project, findErr := models.FindProject(request.Id, db)
+		if findErr != nil {
+			fmt.Println("[---] Find error:", findErr)
+			w.WriteHeader(http.StatusInternalServerError)
+			errMsg := "Could not find the requested project."
+			encoder.Encode(getProjectResponse{&errMsg, "", "", "", "", time.Now()})
+			return
+		}
+		encoder.Encode(getProjectResponse{
+			nil,
+			project.Name,
+			project.Shorthand,
+			project.Status,
+			project.Description,
+			project.CreatedAt,
+		})
 	}
 }
 
