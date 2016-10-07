@@ -288,7 +288,18 @@ func deleteRelease(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 		}
 		request.ProjectID = projectId
 		request.ReleaseID = releaseId
-		// TODO - Delete the release from the DB.
+		// We could load the release from the database but it's simpler to just provide the
+		// releaseId and do the deletion in one step.
+		release := models.NewRelease(request.ProjectID, 0, "")
+		release.Id = request.ReleaseID
+		deleteErr := release.Delete(db)
+		if deleteErr != nil {
+			fmt.Println("[---] Delete error:", deleteErr)
+			w.WriteHeader(http.StatusInternalServerError)
+			errMsg := "Could not delete the release. Please check that the releaseId is correct or try again later."
+			encoder.Encode(deleteReleaseResponse{&errMsg, false})
+			return
+		}
 		encoder.Encode(deleteReleaseResponse{nil, true})
 	}
 }
