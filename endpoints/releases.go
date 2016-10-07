@@ -53,13 +53,22 @@ func listReleases(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 
 		encoder := json.NewEncoder(w)
 		if parseErr != nil {
+			fmt.Println("[---] Parse error:", parseErr)
+			w.WriteHeader(http.StatusBadRequest)
 			errMsg := "projectId must be an integer ID."
 			encoder.Encode(listReleasesResponse{&errMsg, []models.Release{}})
 			return
 		}
 		request.ProjectID = projectId
-		// TODO - List all releases under the project from the database.
-		encoder.Encode(listReleasesResponse{nil, []models.Release{}})
+		releases, listErr := models.ListReleases(request.ProjectID, request.Ordering, db)
+		if listErr != nil {
+			fmt.Println("[---] List error:", listErr)
+			w.WriteHeader(http.StatusInternalServerError)
+			errMsg := "Could not list releases. Please check that the projectId is correct or try again later."
+			encoder.Encode(listReleasesResponse{&errMsg, []models.Release{}})
+			return
+		}
+		encoder.Encode(listReleasesResponse{nil, releases})
 	}
 }
 
