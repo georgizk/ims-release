@@ -6,6 +6,7 @@ import (
 
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -65,9 +66,10 @@ func listReleases(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 // POST /projects/{projectId}/releases
 
 type createReleaseRequest struct {
-	Chapter string               `json:"chapter"`
-	Version int                  `json:"version"`
-	Status  models.ReleaseStatus `json:"status"`
+	ProjectID int                  // Pulled from the URL parameters
+	Chapter   string               `json:"chapter"`
+	Version   int                  `json:"version"`
+	Status    models.ReleaseStatus `json:"status"`
 }
 
 type createReleaseResponse struct {
@@ -81,19 +83,38 @@ func createRelease(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		request := createReleaseRequest{}
+		projectId, parseErr := strconv.Atoi(mux.Vars(r)["projectId"])
 		decoder := json.NewDecoder(r.Body)
 		defer r.Body.Close()
 		decodeErr := decoder.Decode(&request)
 
 		encoder := json.NewEncoder(w)
-		if decodeErr != nil {
+		if parseErr != nil {
+			fmt.Println("[---] Parse error:", parseErr)
 			w.WriteHeader(http.StatusBadRequest)
-			errMsg := "JSON format error or missing field detected."
-			encoder.Encode(createReleaseResponse{&errMsg, false, 0})
+			errMsg := "projectId must be an integer project ID."
+			encoder.Encode(createReleaseResponse{&errMsg, false, -1})
 			return
 		}
-		// TODO - Insert the release into the DB and update its ID etc.
-		encoder.Encode(createReleaseResponse{nil, true, 1})
+		request.ProjectID = projectId
+		if decodeErr != nil {
+			fmt.Println("[---] Decode error:", decodeErr)
+			w.WriteHeader(http.StatusBadRequest)
+			errMsg := "JSON format error or missing field detected."
+			encoder.Encode(createReleaseResponse{&errMsg, false, -1})
+			return
+		}
+		release := models.NewRelease(request.ProjectID, request.Version, request.Chapter)
+		release.Status = request.Status
+		insertErr := release.Save(db)
+		if insertErr != nil {
+			fmt.Println("[---] Insert error:", insertErr)
+			w.WriteHeader(http.StatusInternalServerError)
+			errMsg := "Could not create new release. Please check that the status is valid or try again later."
+			encoder.Encode(createReleaseResponse{&errMsg, false, -1})
+			return
+		}
+		encoder.Encode(createReleaseResponse{nil, true, release.Id})
 	}
 }
 
