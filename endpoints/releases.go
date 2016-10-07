@@ -158,6 +158,7 @@ func getRelease(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 
 		encoder := json.NewEncoder(w)
 		if parseErr1 != nil || parseErr2 != nil {
+			fmt.Printf("[---] Parse error: %v || %v\n", parseErr1, parseErr2)
 			w.WriteHeader(http.StatusBadRequest)
 			errMsg := "projectId and releaseId must be integer IDs."
 			encoder.Encode(getReleaseResponse{&errMsg, "", "", "", "", 0, "", time.Now()})
@@ -165,16 +166,31 @@ func getRelease(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 		}
 		request.ProjectID = projectId
 		request.ReleaseID = releaseId
-		// TODO - Retrieve the release from the DB.
+		project, findErr := models.FindProject(request.ProjectID, db)
+		if findErr != nil {
+			fmt.Printf("[---] Find error:", findErr)
+			w.WriteHeader(http.StatusInternalServerError)
+			errMsg := "Could not find requested project. Please check that the projectId is correct or try again later."
+			encoder.Encode(getReleaseResponse{&errMsg, "", "", "", "", 0, "", time.Now()})
+			return
+		}
+		release, findErr := models.FindRelease(request.ReleaseID, db)
+		if findErr != nil {
+			fmt.Printf("[---] Find error:", findErr)
+			w.WriteHeader(http.StatusInternalServerError)
+			errMsg := "Could not find requested release. Please check that the releaseId is correct or try again later."
+			encoder.Encode(getReleaseResponse{&errMsg, "", "", "", "", 0, "", time.Now()})
+			return
+		}
 		encoder.Encode(getReleaseResponse{
 			nil,
-			"project",
-			"ch001",
-			"ims",
-			"abc123",
-			1,
-			models.RStatusReleased,
-			time.Now(),
+			project.Shorthand,
+			release.Chapter,
+			"ims", // TODO - Do we need to support other group names? How?
+			release.Checksum,
+			release.Version,
+			release.Status,
+			release.ReleasedOn,
 		})
 	}
 }

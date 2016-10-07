@@ -99,15 +99,18 @@ func NewRelease(projectId, version int, chapterName string) Release {
 // FindRelease attempts to lookup a release by ID.
 func FindRelease(id int, db *sql.DB) (Release, error) {
 	r := Release{}
+	status := ""
 	row := db.QueryRow(QFindRelease, id)
 	if row == nil {
 		return Release{}, ErrNoSuchRelease
 	}
-	err := row.Scan(&r.Chapter, &r.Version, &r.Status, &r.Checksum, &r.ReleasedOn, &r.ProjectID)
+	err := row.Scan(&r.Chapter, &r.Version, &status, &r.Checksum, &r.ReleasedOn, &r.ProjectID)
 	if err != nil {
 		return Release{}, err
 	}
+	// TODO - Check if the release has a checksum and, if not, compute it.
 	r.Id = id
+	r.Status = ReleaseStatus(status)
 	return r, nil
 }
 
