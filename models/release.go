@@ -84,7 +84,7 @@ type Release struct {
 
 // NewRelease constructs a brand new Release instance, with a default state lacking information its (future) position in
 // a database.
-func NewRelease(version int, chapterName string) Release {
+func NewRelease(projectId, version int, chapterName string) Release {
 	return Release{
 		0,
 		chapterName,
@@ -92,7 +92,7 @@ func NewRelease(version int, chapterName string) Release {
 		RStatusDraft,
 		"",
 		time.Now(),
-		0,
+		projectId,
 	}
 }
 
@@ -161,7 +161,7 @@ func (r *Release) Save(db *sql.DB) error {
 		return validErr
 	}
 	// TODO - Where should we compute checksums?
-	_, err := db.Exec(QSaveRelease, r.Chapter, r.Version, r.Status, r.Checksum, r.ReleasedOn, r.ProjectID)
+	_, err := db.Exec(QSaveRelease, r.Chapter, r.Version, string(r.Status), r.Checksum, r.ReleasedOn, r.ProjectID)
 	if err != nil {
 		return err
 	}
