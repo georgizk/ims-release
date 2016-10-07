@@ -40,9 +40,9 @@ const (
 );`
 
 	QSaveRelease string = `insert into releases (
-		chapter, version, status, checksum, released_on
+		chapter, version, status, checksum, released_on, project_id
 ) values (
-		?, ?, ?, ?, ?
+		?, ?, ?, ?, ?, ?
 );`
 
 	QUpdateRelease string = `update releases set
@@ -64,7 +64,7 @@ where project_id = ?
 order by released_on asc;`
 
 	QFindRelease string = `select
-chapter, version, status, checksum, released_on
+chapter, version, status, checksum, released_on, project_id
 from releases
 where id = ?;`
 )
@@ -78,7 +78,8 @@ type Release struct {
 	Version    int           `json:"version"`
 	Status     ReleaseStatus `json:"status"`
 	Checksum   string        `json:"checksum"`
-	ReleasedOn time.Time     `json:"releasedOn:`
+	ReleasedOn time.Time     `json:"releasedOn"`
+	ProjectID  int           `json:"projectId"`
 }
 
 // NewRelease constructs a brand new Release instance, with a default state lacking information its (future) position in
@@ -91,6 +92,7 @@ func NewRelease(version int, chapterName string) Release {
 		RStatusDraft,
 		"",
 		time.Now(),
+		0,
 	}
 }
 
@@ -101,7 +103,7 @@ func FindRelease(id int, db *sql.DB) (Release, error) {
 	if row == nil {
 		return Release{}, ErrNoSuchRelease
 	}
-	err := row.Scan(&r.Chapter, &r.Version, &r.Status, &r.Checksum, &r.ReleasedOn)
+	err := row.Scan(&r.Chapter, &r.Version, &r.Status, &r.Checksum, &r.ReleasedOn, &r.ProjectID)
 	if err != nil {
 		return Release{}, err
 	}
@@ -122,14 +124,22 @@ func ListReleases(projectId int, ordering string, db *sql.DB) ([]Release, error)
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var id, version int
+		var id, version, projectId int
 		var chapter, status, checksum string
 		var released time.Time
-		scanErr := rows.Scan(&id, &chapter, &version, &status, &checksum, &released)
+		scanErr := rows.Scan(&id, &chapter, &version, &status, &checksum, &released, &projectId)
 		if scanErr != nil {
 			err = scanErr
 		}
-		releases = append(releases, Release{id, chapter, version, ReleaseStatus(status), checksum, released})
+		releases = append(releases, Release{
+			id,
+			chapter,
+			version,
+			ReleaseStatus(status),
+			checksum,
+			released,
+			projectId,
+		})
 	}
 	return releases, err
 }
@@ -151,7 +161,7 @@ func (r *Release) Save(db *sql.DB) error {
 		return validErr
 	}
 	// TODO - Where should we compute checksums?
-	_, err := db.Exec(QSaveRelease, r.Chapter, r.Version, r.Status, r.Checksum, r.ReleasedOn)
+	_, err := db.Exec(QSaveRelease, r.Chapter, r.Version, r.Status, r.Checksum, r.ReleasedOn, r.ProjectID)
 	if err != nil {
 		return err
 	}
