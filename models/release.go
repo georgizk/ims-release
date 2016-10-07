@@ -177,6 +177,10 @@ func (r *Release) Save(db *sql.DB) error {
 
 // Update modifies all of the fields of a Release in place with whatever is currently in the struct.
 func (r *Release) Update(db *sql.DB) error {
+	validErr := r.Validate()
+	if validErr != nil {
+		return validErr
+	}
 	now := time.Now()
 	_, err := db.Exec(QUpdateRelease, r.Chapter, r.Version, string(r.Status), r.Checksum, now, r.Id)
 	r.ReleasedOn = now
