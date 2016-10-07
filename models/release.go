@@ -124,10 +124,10 @@ func ListReleases(projectId int, ordering string, db *sql.DB) ([]Release, error)
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var id, version, projectId int
+		var id, version int
 		var chapter, status, checksum string
 		var released time.Time
-		scanErr := rows.Scan(&id, &chapter, &version, &status, &checksum, &released, &projectId)
+		scanErr := rows.Scan(&id, &chapter, &version, &status, &checksum, &released)
 		if scanErr != nil {
 			err = scanErr
 		}
