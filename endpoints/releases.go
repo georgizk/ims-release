@@ -239,7 +239,19 @@ func updateRelease(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 			encoder.Encode(updateReleaseResponse{&errMsg, false})
 			return
 		}
-		// TODO - Update the release in the DB.
+		// We could load the release from the database and update its fields but there's no
+		// point doing that when we can have the DB update the right row with the releaseId.
+		release := models.NewRelease(request.ProjectID, request.Version, request.Chapter)
+		release.Id = request.ReleaseID
+		release.Status = request.Status
+		updateErr := release.Update(db)
+		if updateErr != nil {
+			fmt.Println("[---] Update error:", updateErr)
+			w.WriteHeader(http.StatusInternalServerError)
+			errMsg := "Could not update the specified release. Please check that the releaseId is correct or try again later."
+			encoder.Encode(updateReleaseResponse{&errMsg, false})
+			return
+		}
 		encoder.Encode(updateReleaseResponse{nil, true})
 	}
 }
