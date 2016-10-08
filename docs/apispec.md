@@ -52,7 +52,7 @@ version | integer | The version number of the release, starting from 1
 ### Download a single image
 
 ```
-GET /projects/{projectId}/releases/{releaseId}/pages/{pageId}
+GET /{projectName}-{chapter}.{version}/{page}.{ext}
 ```
 
 * Downloads the requested image from the archive
@@ -64,9 +64,11 @@ Instead of this endpoint accepting parameters in the usual URL query parameter f
 
 Name | Type | Description
 -----|------|------------
-projectId | integer | The unique id of the project under which the release was created
-releaseId | integer | The unique id of the release
-pageId | integer | The unique id of the page, as returned by the "add a new page to a release" endpoint
+projectName | string | The name of a project
+chapter | string | The chapter number
+version | integer | The version number of the release, starting from 1
+page | string | The page number, starting from 1
+ext | string | The filetype extension of the page's file
 
 #### Response
 

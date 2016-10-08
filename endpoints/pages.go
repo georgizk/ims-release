@@ -13,19 +13,13 @@ import (
 	"fmt"
 	"image/jpeg"
 	"image/png"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
 	"strconv"
-	"strings"
 
 	"github.com/gorilla/mux"
 )
-
-// TODO
-// - If loading images into memory to serve them becomes too much of a burden (and it may well)
-//   then we should switch to a means of streaming the contents of the file into the HTTP response.
 
 // randomFilename produces a random 16-character (8-byte) hex string which, when formatted like
 // {rand}.{ext} is a filename for an image with a given extension that is not already taken.
@@ -58,7 +52,6 @@ func randomFilename(cfg *config.Config, ext string) string {
 func RegisterPageHandlers(r *mux.Router, db *sql.DB, cfg *config.Config) {
 	r.HandleFunc("/", listPages(db, cfg)).Methods("GET")
 	r.HandleFunc("/", createPage(db, cfg)).Methods("POST")
-	r.HandleFunc("/{pageId}", getPage(db, cfg)).Methods("GET")
 	r.HandleFunc("/{pageId}", deletePage(db, cfg)).Methods("DELETE")
 }
 
@@ -206,67 +199,6 @@ func createPage(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 			return
 		}
 		encoder.Encode(createPageResponse{nil, true, page.Id})
-	}
-}
-
-// GET /projects/{projectId}/releases/{releaseId}/pages/{pageId}
-
-type getPageRequest struct {
-	ProjectID int
-	ReleaseID int
-	PageID    int
-}
-
-// getPage retrieves the contents of a page from disk.
-func getPage(db *sql.DB, cfg *config.Config) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		request := getPageRequest{}
-		vars := mux.Vars(r)
-		prid := vars["projectId"]
-		reid := vars["releaseId"]
-		paid := vars["pageId"]
-		projectId, parseErr1 := strconv.Atoi(prid)
-		releaseId, parseErr2 := strconv.Atoi(reid)
-		pageId, parseErr3 := strconv.Atoi(paid)
-
-		if parseErr1 != nil || parseErr2 != nil || parseErr3 != nil {
-			fmt.Println("[---] Parse error: %v || %v || %v\n", parseErr1, parseErr2, parseErr3)
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("Please ensure that each of the projectId, releaseId, and pageId parameters are valid integers."))
-			return
-		}
-		request.ProjectID = projectId
-		request.ReleaseID = releaseId
-		request.PageID = pageId
-		page, findErr := models.FindPage(request.PageID, db)
-		if findErr != nil {
-			fmt.Println("[---] Find error:", findErr)
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("Could not find the requested page. Please ensure that the pageId is correct."))
-			return
-		}
-		f, openErr := os.Open(page.Location)
-		if openErr != nil {
-			fmt.Println("[---] Open error:", openErr)
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("Could not read the page file. Please try again later."))
-			return
-		}
-		imageBytes, readErr := ioutil.ReadAll(f)
-		defer f.Close()
-		if readErr != nil {
-			fmt.Println("[---] Open error:", openErr)
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("Could not read the page file. Please try again later."))
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		if strings.HasSuffix(page.Location, "png") {
-			w.Header().Set("Content-Type", "image/png")
-		} else {
-			w.Header().Set("Content-Type", "image/jpeg")
-		}
-		w.Write(imageBytes)
 	}
 }
 

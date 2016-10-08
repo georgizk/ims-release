@@ -39,6 +39,9 @@ func main() {
 	pagesRouter := router.PathPrefix("/projects/{projectId}/releases/{releaseId}/pages").Subrouter()
 	endpoints.RegisterPageHandlers(pagesRouter, db, &cfg)
 
+	// Should match /{projectName}-{chapter}.{version}/{page}.{ext}
+	router.HandleFunc("/{pc:\\w+-\\w+\\.\\d+}/{page:\\w+\\.\\w+}", endpoints.DownloadImage(db, &cfg)).Methods("GET")
+
 	address := "0.0.0.0:3000"
 	fmt.Printf("Listening on %s\n", address)
 	http.ListenAndServe(address, router)

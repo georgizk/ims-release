@@ -47,6 +47,24 @@ order by number asc;`
 number, location, created_at
 from pages
 where id = ?;`
+
+	QLookupPage string = `select
+P.id, P.location, P.created_at, P.release_id
+from pages P
+where number = ?
+	and exists (
+		select R.id
+		from releases R
+		where R.id = P.release_id
+			and R.chapter = ?
+			and R.version = ?
+			and exists (
+				select P2.id
+				from projects P2
+				where P2.id = R.project_id
+					and P2.project_name = ?
+			)
+	);`
 )
 
 // Page contains information about a single page of manga. Most important is its page number and location, which is the
@@ -83,6 +101,21 @@ func FindPage(id int, db *sql.DB) (Page, error) {
 		return Page{}, err
 	}
 	p.Id = id
+	return p, nil
+}
+
+// LookupPage attempts to find a specific page assigned to a release in a project.
+func LookupPage(pageNumber, releaseChapter string, releaseVersion int, projectName string, db *sql.DB) (Page, error) {
+	p := Page{}
+	row := db.QueryRow(QLookupPage, pageNumber, releaseChapter, releaseVersion, projectName)
+	if row == nil {
+		return Page{}, ErrNoSuchPage
+	}
+	err := row.Scan(&p.Id, &p.Location, &p.CreatedAt, &p.ReleaseID)
+	if err != nil {
+		return Page{}, err
+	}
+	p.Number = pageNumber
 	return p, nil
 }
 
