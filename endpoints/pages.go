@@ -23,6 +23,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// TODO
+// - If loading images into memory to serve them becomes too much of a burden (and it may well)
+//   then we should switch to a means of streaming the contents of the file into the HTTP response.
+
 // randomFilename produces a random 16-character (8-byte) hex string which, when formatted like
 // {rand}.{ext} is a filename for an image with a given extension that is not already taken.
 // Since the space of acceptable file names is so large despite requiring so few random bytes,
