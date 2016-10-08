@@ -230,6 +230,7 @@ func deletePage(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 
 		encoder := json.NewEncoder(w)
 		if parseErr1 != nil || parseErr2 != nil || parseErr3 != nil {
+			fmt.Println("[---] Parse error: %v || %v || %v\n", parseErr1, parseErr2, parseErr3)
 			w.WriteHeader(http.StatusBadRequest)
 			errMsg := "projectId, releaseId, and pageId must all be integer IDs."
 			encoder.Encode(deletePageResponse{&errMsg, false})
@@ -238,7 +239,26 @@ func deletePage(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 		request.ProjectID = projectId
 		request.ReleaseID = releaseId
 		request.PageID = pageId
-		// TODO - Delete the page from the DB and the file from disk.
+		// Unlike with projects and releases, we need to actually load the page we want to
+		// delete from DB, because it needs the correct location of the page image on disk
+		// to be able to delete that as well.
+		page, findErr := models.FindPage(request.PageID, db)
+		if findErr != nil {
+			fmt.Println("[---] Find error:", findErr)
+			w.WriteHeader(http.StatusBadRequest)
+			errMsg := "Could not find the requested page. Please check that the page id is correct or try again later."
+			encoder.Encode(deletePageResponse{&errMsg, false})
+			return
+		}
+		fmt.Println("[+++] Attempting to delete page", page)
+		deleteErr := page.Delete(db)
+		if deleteErr != nil {
+			fmt.Println("[---] Delete error:", findErr)
+			w.WriteHeader(http.StatusInternalServerError)
+			errMsg := "Could not delete the requested page. Please try again later."
+			encoder.Encode(deletePageResponse{&errMsg, false})
+			return
+		}
 		encoder.Encode(deletePageResponse{nil, true})
 	}
 }
