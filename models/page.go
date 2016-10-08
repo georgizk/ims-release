@@ -9,7 +9,8 @@ import (
 
 // Errors pertaining to the data in a Page or operations on Pages.
 var (
-	ErrNoSuchPage = errors.New("Could not find page.")
+	ErrNoSuchPage      = errors.New("Could not find page.")
+	ErrPageNumberEmpty = errors.New("Page number is empty.")
 )
 
 // Database queries for operations on Pages.
@@ -107,7 +108,10 @@ func ListPages(releaseId int, db *sql.DB) ([]Page, error) {
 }
 
 // Validate currently doesn't perform any integrity checks.
-func (p Page) Validate() error {
+func (p *Page) Validate() error {
+	if len(p.Number) == 0 {
+		return ErrPageNumberEmpty
+	}
 	return nil
 }
 
