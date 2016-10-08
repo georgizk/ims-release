@@ -57,12 +57,12 @@ func RegisterPageHandlers(r *mux.Router, db *sql.DB, cfg *config.Config) {
 
 // GET /projects/{projectId}/releases/{releaseId}/pages
 
-type getPagesRequest struct {
+type listPagesRequest struct {
 	ProjectID int
 	ReleaseID int
 }
 
-type getPagesResponse struct {
+type listPagesResponse struct {
 	Error *string       `json:"error"`
 	Pages []models.Page `json:"pages"`
 }
@@ -71,7 +71,7 @@ type getPagesResponse struct {
 func listPages(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		request := getPagesRequest{}
+		request := listPagesRequest{}
 		vars := mux.Vars(r)
 		pid := vars["projectId"]
 		rid := vars["releaseId"]
@@ -80,15 +80,23 @@ func listPages(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 
 		encoder := json.NewEncoder(w)
 		if parseErr1 != nil || parseErr2 != nil {
+			fmt.Printf("[---] Parse error: %v || %v\n", parseErr1, parseErr2)
 			w.WriteHeader(http.StatusBadRequest)
 			errMsg := "projectId and releaseId must be integer IDs."
-			encoder.Encode(getPagesResponse{&errMsg, []models.Page{}})
+			encoder.Encode(listPagesResponse{&errMsg, []models.Page{}})
 			return
 		}
 		request.ProjectID = projectId
 		request.ReleaseID = releaseId
-		// TODO - Fetch the list of pages from the DB.
-		encoder.Encode(getPagesResponse{nil, []models.Page{}})
+		pages, listErr := models.ListPages(request.ReleaseID, db)
+		if listErr != nil {
+			fmt.Println("[---] List error:", listErr)
+			w.WriteHeader(http.StatusInternalServerError)
+			errMsg := "Could not list pages. Please check that the projectId is correct or try again later."
+			encoder.Encode(listPagesResponse{&errMsg, []models.Page{}})
+			return
+		}
+		encoder.Encode(listPagesResponse{nil, pages})
 	}
 }
 
