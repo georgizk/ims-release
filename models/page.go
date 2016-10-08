@@ -25,9 +25,9 @@ const (
 );`
 
 	QSavePage string = `insert into pages (
-		number, location, created_at
+		number, location, created_at, release_id
 ) values (
-		?, ?, ?
+		?, ?, ?, ?
 );`
 
 	QUpdatePage string = `update pages set
@@ -55,16 +55,18 @@ type Page struct {
 	Number    string    `json:"page"`
 	Location  string    `json:"-"` // Omit from JSON encodings
 	CreatedAt time.Time `json:"createdAt"`
+	ReleaseID int       `json:"releaseId"`
 }
 
 // NewPage constructs a brand new Project instance, with a default state lacking information about its (future)
 // position in a database.
-func NewPage(pageNum, filePath string) Page {
+func NewPage(pageNum, filePath string, releaseId int) Page {
 	return Page{
 		0,
 		pageNum,
 		filePath,
 		time.Now(),
+		releaseId,
 	}
 }
 
@@ -99,7 +101,7 @@ func ListPages(releaseId int, db *sql.DB) ([]Page, error) {
 		if scanErr != nil {
 			err = scanErr
 		}
-		pages = append(pages, Page{id, number, location, created})
+		pages = append(pages, Page{id, number, location, created, releaseId})
 	}
 	return pages, err
 }
@@ -116,7 +118,7 @@ func (p *Page) Save(db *sql.DB) error {
 		return validErr
 	}
 	// TODO - Make sure to save image data to disk before saving the Page.
-	_, err := db.Exec(QSavePage, p.Number, p.Location, p.CreatedAt)
+	_, err := db.Exec(QSavePage, p.Number, p.Location, p.CreatedAt, p.ReleaseID)
 	if err != nil {
 		return err
 	}
