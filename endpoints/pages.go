@@ -181,7 +181,7 @@ func createPage(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 			return
 		}
 		fmt.Println("[+++] Successfully saved image to disk")
-		page := models.NewPage(request.Number, filePath)
+		page := models.NewPage(request.Number, filePath, request.ReleaseID)
 		saveErr = page.Save(db)
 		if saveErr != nil {
 			fmt.Println("[---] Insert error:", saveErr)
