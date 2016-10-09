@@ -74,6 +74,19 @@ order by released_on asc;`
 chapter, version, status, checksum, released_on, project_id
 from releases
 where id = ?;`
+
+	QLookupRelease string = `select
+R.id, R.status, R.released_on, R.project_id
+from releases R
+where R.chapter = ?
+	and R.version = ?
+	and R.checksum = ?
+	and exists (
+		select P.id
+		from projects P
+		where P.project_name = ?
+			and P.id = R.project_id
+	);`
 )
 
 // Release contains information about a release, which there are many of under a given Project.  It contains information
@@ -120,6 +133,24 @@ func FindRelease(id int, db *sql.DB) (Release, error) {
 	if r.Checksum == "" {
 		r.CreateArchive(db)
 	}
+	return r, nil
+}
+
+// LookupRelease attempts to find a specific release under a given project.
+func LookupRelease(chapter string, version int, checksum, projectName string, db *sql.DB) (Release, error) {
+	r := Release{}
+	var status string
+	row := db.QueryRow(QLookupRelease, chapter, version, checksum, projectName)
+	if row == nil {
+		return Release{}, ErrNoSuchRelease
+	}
+	err := row.Scan(&r.Id, &status, &r.ReleasedOn, &r.ProjectID)
+	if err != nil {
+		return Release{}, err
+	}
+	r.Chapter = chapter
+	r.Version = version
+	r.Checksum = checksum
 	return r, nil
 }
 
