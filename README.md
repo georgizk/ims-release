@@ -29,13 +29,16 @@ documentation.
 [username[:password]@][protocol[(address)]]/dbname[?param1=value1&...&paramN=valueN]
 ```
 
-## Development
+## Usage
 
-To develop IMS-Release, you will need a few things set up. The steps below will guide you through the most simple setup for local development.
+To run IMS-Release, you will need a few things set up. The steps below will guide you through the most simple setup for local development.
 
 ### Setup
 
 #### Golang
+
+1. Download Go
+2. Set the GOROOT environment variable
 
 First, download Go from the [official site](https://golang.org/dl/).  After you've downloaded it, extract and run the installer.  Next, you'll want to set the `GOROOT` environment variable globablly for your user.  The recommended way is to add the following to either your `$HOME/.profile`, `$HOME/.bashrc`, or `$HOME/.zshrc` file.
 
@@ -52,6 +55,9 @@ go version
 You should see output like `go version go1.7.1 darwin/amd64` or something else to match your system.
 
 #### MySQL
+
+1. Start the MySQL server
+2. Create and configure a new database
 
 You should install mysql via whatever package manager you happen to use.  On macOS, this would preferrably be [Homebrew](http://brew.sh/), or else the usual apt/yum/pacman if you are running Linux. Once installed, start the mysql server by running
 
@@ -75,6 +81,9 @@ mysql> set global sql_mode = 'NO_ENGINE_SUBSTITUTION';
 ```
 
 #### Config
+
+1. Update the configuration to use the appropriate database and credentials
+2. Create a directory to svae images to
 
 The last thing to do is to make sure your `config/config.json` file has the right data.  For this local setup, it should contain the following.
 
