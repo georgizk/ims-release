@@ -61,6 +61,9 @@ func parseDownloadArchiveRequest(path string) (getArchiveRequest, error) {
 	}
 	req.Chapter = parts[0]
 	parts = strings.Split(parts[1], "]")
+	if len(parts) != 2 {
+		return getArchiveRequest{}, ErrInvalidURLFormat
+	}
 	req.GroupName = parts[0]
 	req.Checksum = parts[1]
 
