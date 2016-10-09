@@ -41,6 +41,8 @@ func main() {
 
 	// Should match /{projectName}-{chapter}.{version}/{page}.{ext}
 	router.HandleFunc("/{pc:\\w+-\\w+\\.\\d+}/{page:\\w+\\.\\w+}", endpoints.DownloadImage(db, &cfg)).Methods("GET")
+	// Should match /{projectName}-{chapter}{groupName}{checksum}.{version}.zip
+	router.HandleFunc("/{path:\\w+-\\w+ims\\w+\\.\\d+\\.zip}", endpoints.DownloadArchive(db, &cfg)).Methods("GET")
 
 	address := "0.0.0.0:3000"
 	fmt.Printf("Listening on %s\n", address)

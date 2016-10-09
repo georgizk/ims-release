@@ -4,7 +4,9 @@ import (
 	"archive/zip"
 	"bytes"
 	"database/sql"
+	"encoding/hex"
 	"errors"
+	"hash/crc32"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -113,9 +115,11 @@ func FindRelease(id int, db *sql.DB) (Release, error) {
 	if err != nil {
 		return Release{}, err
 	}
-	// TODO - Check if the release has a checksum and, if not, compute it.
 	r.Id = id
 	r.Status = ReleaseStatus(status)
+	if r.Checksum == "" {
+		r.CreateArchive(db)
+	}
 	return r, nil
 }
 
@@ -168,7 +172,6 @@ func (r *Release) Save(db *sql.DB) error {
 	if validErr != nil {
 		return validErr
 	}
-	// TODO - Where should we compute checksums?
 	_, err := db.Exec(QSaveRelease, r.Chapter, r.Version, string(r.Status), r.Checksum, r.ReleasedOn, r.ProjectID)
 	if err != nil {
 		return err
@@ -243,5 +246,26 @@ func (r *Release) CreateArchive(db *sql.DB) ([]byte, error) {
 		}
 	}
 	finalizeErr := w.Close()
-	return buffer.Bytes(), finalizeErr
+	archive := buffer.Bytes()
+	checksum := computeChecksum(archive)
+	if checksum != r.Checksum {
+		r.Checksum = checksum
+		updateErr := r.Update(db)
+		if updateErr != nil {
+			return archive, updateErr
+		}
+	}
+	return archive, finalizeErr
+}
+
+// computeChecksum computes the crc32 checksum of an archive and returns it encoded as hex.
+func computeChecksum(archive []byte) string {
+	cs := crc32.ChecksumIEEE(archive)
+	csBytes := []byte{
+		byte(cs >> 24),
+		byte(cs >> 16),
+		byte(cs >> 8),
+		byte(cs),
+	}
+	return hex.EncodeToString(csBytes[:])
 }
