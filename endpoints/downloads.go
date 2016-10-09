@@ -40,6 +40,7 @@ func parseDownloadArchiveRequest(path string) (getReleaseRequest, error) {
 	req := getReleaseRequest{}
 
 	// Expect the url to be formatted {projectName}-{chapter}{groupName}{checksum}.{version}.zip
+	// Note that "groupName" will be surrounded in square brackets like [groupName].
 	parts := strings.Split(path, "-")
 	if len(parts) != 2 {
 		return getReleaseRequest{}, ErrInvalidURLFormat
@@ -54,15 +55,14 @@ func parseDownloadArchiveRequest(path string) (getReleaseRequest, error) {
 		return getReleaseRequest{}, parseErr
 	}
 	req.Version = version
-	// TODO - We need a real delimiter to be able to parse {chapter}{groupName}{checksum}
-	// if we want group names other than "ims".
-	parts = strings.Split(parts[0], "ims")
+	parts = strings.Split(parts[0], "[")
 	if len(parts) != 2 {
 		return getReleaseRequest{}, ErrInvalidURLFormat
 	}
-	req.GroupName = "ims"
-	req.Checksum = parts[1]
 	req.Chapter = parts[0]
+	parts = strings.Split(parts[1], "]")
+	req.GroupName = parts[0]
+	req.Checksum = parts[1]
 
 	return req, nil
 }
