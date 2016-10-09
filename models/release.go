@@ -1,8 +1,13 @@
 package models
 
 import (
+	"archive/zip"
+	"bytes"
 	"database/sql"
 	"errors"
+	"io/ioutil"
+	"os"
+	"strings"
 	"time"
 )
 
@@ -205,4 +210,38 @@ func (r *Release) Delete(db *sql.DB) error {
 		return listErr
 	}
 	return deleteErr
+}
+
+// CreateArchive builds a zip file containing all of the image files of pages that are part of the release.
+// It will also compute the checksum of the zip file and update the release's checksum field if it has changed.
+func (r *Release) CreateArchive(db *sql.DB) ([]byte, error) {
+	pages, listErr := ListPages(r.Id, db)
+	if listErr != nil {
+		return []byte{}, listErr
+	}
+	buffer := new(bytes.Buffer)
+	w := zip.NewWriter(buffer)
+	for _, page := range pages {
+		f, openErr := os.Open(page.Location)
+		if openErr != nil {
+			return []byte{}, openErr
+		}
+		imgData, readErr := ioutil.ReadAll(f)
+		if readErr != nil {
+			return []byte{}, readErr
+		}
+		f.Close()
+		parts := strings.Split(page.Location, ".")
+		ext := parts[len(parts)-1]
+		f2, openErr := w.Create(page.Number + "." + ext)
+		if openErr != nil {
+			return []byte{}, openErr
+		}
+		_, writeErr := f2.Write(imgData)
+		if writeErr != nil {
+			return []byte{}, writeErr
+		}
+	}
+	finalizeErr := w.Close()
+	return buffer.Bytes(), finalizeErr
 }
