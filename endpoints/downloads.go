@@ -72,7 +72,30 @@ func DownloadArchive(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		request, parseErr := parseDownloadArchiveRequest(mux.Vars(r)["path"])
 		if parseErr != nil {
+			fmt.Println("[---] Parse error:", parseErr)
+			w.WriteHeader(http.StatusBadRequest)
+			errMsg := "Could not parse all of the required parameters from the URL."
+			w.Write([]byte(errMsg))
+			return
 		}
+		release, lookupErr := models.LookupRelease(request.Chapter, request.Version, request.Checksum, request.ProjectName, db)
+		if lookupErr != nil {
+			fmt.Println("[---] Lookup error:", lookupErr)
+			w.WriteHeader(http.StatusBadRequest)
+			errMsg := "Could not lookup requested archive. Please check that the file format is correct or try again later."
+			w.Write([]byte(errMsg))
+			return
+		}
+		archive, buildErr := release.CreateArchive(db)
+		if buildErr != nil {
+			fmt.Println("[---] Build error:", buildErr)
+			w.WriteHeader(http.StatusInternalServerError)
+			errMsg := "Could not produce an archive for the release requested. Please try again later."
+			w.Write([]byte(errMsg))
+			return
+		}
+		w.Header().Set("Content-Type", "application/zip")
+		w.Write(archive)
 	}
 }
 
@@ -129,7 +152,7 @@ func DownloadImage(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 		if parseErr != nil {
 			fmt.Println("[---] Parse error: %v\n", parseErr)
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("Please ensure that each of the projectId, releaseId, and pageId parameters are valid integers."))
+			w.Write([]byte("Could not parse all of the parameters required from the URL."))
 			return
 		}
 		page, findErr := models.LookupPage(request.Page, request.Chapter, request.Version, request.ProjectName, db)
