@@ -26,7 +26,7 @@ var (
 )
 
 // GET /{projectName}-{chapter}{groupName}{checksum}.{version}.zip
-type getReleaseRequest struct {
+type getArchiveRequest struct {
 	ProjectName string
 	Chapter     string
 	GroupName   string
@@ -36,28 +36,28 @@ type getReleaseRequest struct {
 
 // parseDownloadArchiveRequest attempts to parse all of the parameters out of a DownloadArchive
 // request from the URL requested to download an archive.
-func parseDownloadArchiveRequest(path string) (getReleaseRequest, error) {
-	req := getReleaseRequest{}
+func parseDownloadArchiveRequest(path string) (getArchiveRequest, error) {
+	req := getArchiveRequest{}
 
 	// Expect the url to be formatted {projectName}-{chapter}{groupName}{checksum}.{version}.zip
 	// Note that "groupName" will be surrounded in square brackets like [groupName].
 	parts := strings.Split(path, "-")
 	if len(parts) != 2 {
-		return getReleaseRequest{}, ErrInvalidURLFormat
+		return getArchiveRequest{}, ErrInvalidURLFormat
 	}
 	req.ProjectName = parts[0]
 	parts = strings.Split(parts[1], ".")
 	if len(parts) != 3 {
-		return getReleaseRequest{}, ErrInvalidURLFormat
+		return getArchiveRequest{}, ErrInvalidURLFormat
 	}
 	version, parseErr := strconv.Atoi(parts[1])
 	if parseErr != nil {
-		return getReleaseRequest{}, parseErr
+		return getArchiveRequest{}, parseErr
 	}
 	req.Version = version
 	parts = strings.Split(parts[0], "[")
 	if len(parts) != 2 {
-		return getReleaseRequest{}, ErrInvalidURLFormat
+		return getArchiveRequest{}, ErrInvalidURLFormat
 	}
 	req.Chapter = parts[0]
 	parts = strings.Split(parts[1], "]")
