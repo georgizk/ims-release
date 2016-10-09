@@ -25,6 +25,57 @@ var (
 	ErrInvalidURLFormat = errors.New("The URL you requested is not formatted correctly and appears to be missing data.")
 )
 
+// GET /{projectName}-{chapter}{groupName}{checksum}.{version}.zip
+type getReleaseRequest struct {
+	ProjectName string
+	Chapter     string
+	GroupName   string
+	Checksum    string
+	Version     int
+}
+
+// parseDownloadArchiveRequest attempts to parse all of the parameters out of a DownloadArchive
+// request from the URL requested to download an archive.
+func parseDownloadArchiveRequest(path string) (getReleaseRequest, error) {
+	req := getReleaseRequest{}
+
+	// Expect the url to be formatted {projectName}-{chapter}{groupName}{checksum}.{version}.zip
+	parts := strings.Split(path, "-")
+	if len(parts) != 2 {
+		return getReleaseRequest{}, ErrInvalidURLFormat
+	}
+	req.ProjectName = parts[0]
+	parts = strings.Split(parts[1], ".")
+	if len(parts) != 3 {
+		return getReleaseRequest{}, ErrInvalidURLFormat
+	}
+	version, parseErr := strconv.Atoi(parts[1])
+	if parseErr != nil {
+		return getReleaseRequest{}, parseErr
+	}
+	req.Version = version
+	// TODO - We need a real delimiter to be able to parse {chapter}{groupName}{checksum}
+	// if we want group names other than "ims".
+	parts = strings.Split(parts[0], "ims")
+	if len(parts) != 2 {
+		return getReleaseRequest{}, ErrInvalidURLFormat
+	}
+	req.GroupName = "ims"
+	req.Checksum = parts[1]
+	req.Chapter = parts[0]
+
+	return req, nil
+}
+
+// DownloadArchive prepares and downloads the latest version of an archive for a particular release.
+func DownloadArchive(db *sql.DB, cfg *config.Config) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		request, parseErr := parseDownloadArchiveRequest(mux.Vars(r)["path"])
+		if parseErr != nil {
+		}
+	}
+}
+
 // GET /{projectName}-{chapter}.{version}/{page}.{ext}
 
 type getPageRequest struct {
@@ -67,7 +118,7 @@ func parseDownloadImageRequest(pac, pnum string) (getPageRequest, error) {
 	return req, nil
 }
 
-// getPage retrieves the contents of a page from disk.
+// DownloadImage retrieves the contents of a page from disk.
 func DownloadImage(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
