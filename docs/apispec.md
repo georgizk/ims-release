@@ -215,7 +215,7 @@ ordering | optional string | Either "newest" or "oldest" to specify whether the 
 
 Name | Type | Description
 -----|------|------------
-releases | `[{"id": integer, "releasedOn": string, "version": integer, "checksum": string}]` | An array of objects containing information about releases
+releases | `[{"id": integer, "releasedOn": string, "version": integer}]` | An array of objects containing information about releases
 
 ### Create a new release
 
@@ -258,7 +258,6 @@ Name | Type | Description
 projectName | string | The unique projectName of the project that the release was created for
 chapter | string | The integer number of the chapter the release contains
 groupName | string | "ims"
-checksum | string | The hex encoding of the sha256 checksum of the release's zip file
 version | integer | The release version number
 status | string | The status of the release
 releasedOn | string | The date that the release was made with its current status
