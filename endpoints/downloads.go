@@ -107,25 +107,26 @@ type getPageRequest struct {
 
 // Attempts to parse all of the parameters out of a DownloadImage request from the
 // url requested to download a page.
+// The expected format is {projectName} - {chapter}[{version}]/{page}.{ext}
 func parseDownloadImageRequest(pac, pnum string) (getPageRequest, error) {
 	req := getPageRequest{}
 
-	// Expect pac (page and chapter section) to be formatted {projectName}-{chapter}.{version}
-	parts := strings.Split(pac, ".")
+	// Expect pac (page and chapter section) to be formatted {projectName} - {chapter}[{version}]
+	parts := strings.Split(pac, "-")
 	if len(parts) != 2 {
 		return getPageRequest{}, ErrInvalidURLFormat
 	}
-	version, parseErr := strconv.Atoi(parts[1])
+	req.ProjectName = strings.Trim(parts[0], " ")
+	parts = strings.Split(parts[1], "[")
+	if len(parts) != 2 {
+		return getPageRequest{}, ErrInvalidURLFormat
+	}
+	req.Chapter = strings.Trim(parts[0], " ")
+	version, parseErr := strconv.Atoi(strings.Trim(parts[1], "]"))
 	if parseErr != nil {
 		return getPageRequest{}, ErrInvalidURLFormat
 	}
 	req.Version = version
-	parts = strings.Split(parts[0], "-")
-	if len(parts) != 2 {
-		return getPageRequest{}, ErrInvalidURLFormat
-	}
-	req.ProjectName = parts[0]
-	req.Chapter = parts[1]
 
 	// Expect pnum (page number) to be formatted {pageNumber}.{ext}
 	// We will ignore the extension.
