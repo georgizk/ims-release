@@ -4,9 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"database/sql"
-	"encoding/hex"
 	"errors"
-	"hash/crc32"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -39,7 +37,6 @@ const (
 		chapter varchar(255),
 		version int,
 		status varchar(255),
-		checksum varchar(255),
 		released_on timestamp,
 		project_id int,
 		foreign key(project_id) references projects(id),
@@ -47,31 +44,31 @@ const (
 );`
 
 	QSaveRelease string = `insert into releases (
-		chapter, version, status, checksum, released_on, project_id
+		chapter, version, status, released_on, project_id
 ) values (
 		?, ?, ?, ?, ?, ?
 );`
 
 	QUpdateRelease string = `update releases set
-chapter = ?, version = ?, status = ?, checksum = ?, released_on = ?
+chapter = ?, version = ?, status = ?, released_on = ?
 where id = ?;`
 
 	QDeleteRelease string = `delete from releases where id = ?;`
 
 	QListReleasesDesc string = `select
-id, chapter, version, status, checksum, released_on
+id, chapter, version, status, released_on
 from releases
 where project_id = ?
 order by released_on desc;`
 
 	QListReleasesAsc string = `select
-id, chapter, version, status, checksum, released_on
+id, chapter, version, status, released_on
 from releases
 where project_id = ?
 order by released_on asc;`
 
 	QFindRelease string = `select
-chapter, version, status, checksum, released_on, project_id
+chapter, version, status, released_on, project_id
 from releases
 where id = ?;`
 
@@ -80,7 +77,6 @@ R.id, R.status, R.released_on, R.project_id
 from releases R
 where R.chapter = ?
 	and R.version = ?
-	and R.checksum = ?
 	and exists (
 		select P.id
 		from projects P
@@ -97,7 +93,6 @@ type Release struct {
 	Chapter    string        `json:"chapter"`
 	Version    int           `json:"version"`
 	Status     ReleaseStatus `json:"status"`
-	Checksum   string        `json:"checksum"`
 	ReleasedOn time.Time     `json:"releasedOn"`
 	ProjectID  int           `json:"projectId"`
 }
@@ -110,7 +105,6 @@ func NewRelease(projectId, version int, chapterName string) Release {
 		chapterName,
 		version,
 		RStatusDraft,
-		"",
 		time.Now(),
 		projectId,
 	}
@@ -124,23 +118,20 @@ func FindRelease(id int, db *sql.DB) (Release, error) {
 	if row == nil {
 		return Release{}, ErrNoSuchRelease
 	}
-	err := row.Scan(&r.Chapter, &r.Version, &status, &r.Checksum, &r.ReleasedOn, &r.ProjectID)
+	err := row.Scan(&r.Chapter, &r.Version, &status, &r.ReleasedOn, &r.ProjectID)
 	if err != nil {
 		return Release{}, err
 	}
 	r.Id = id
 	r.Status = ReleaseStatus(status)
-	if r.Checksum == "" {
-		r.CreateArchive(db)
-	}
 	return r, nil
 }
 
 // LookupRelease attempts to find a specific release under a given project.
-func LookupRelease(chapter string, version int, checksum, projectName string, db *sql.DB) (Release, error) {
+func LookupRelease(chapter string, version int, projectName string, db *sql.DB) (Release, error) {
 	r := Release{}
 	var status string
-	row := db.QueryRow(QLookupRelease, chapter, version, checksum, projectName)
+	row := db.QueryRow(QLookupRelease, chapter, version, projectName)
 	if row == nil {
 		return Release{}, ErrNoSuchRelease
 	}
@@ -150,7 +141,6 @@ func LookupRelease(chapter string, version int, checksum, projectName string, db
 	}
 	r.Chapter = chapter
 	r.Version = version
-	r.Checksum = checksum
 	return r, nil
 }
 
@@ -168,9 +158,9 @@ func ListReleases(projectId int, ordering string, db *sql.DB) ([]Release, error)
 	defer rows.Close()
 	for rows.Next() {
 		var id, version int
-		var chapter, status, checksum string
+		var chapter, status string
 		var released time.Time
-		scanErr := rows.Scan(&id, &chapter, &version, &status, &checksum, &released)
+		scanErr := rows.Scan(&id, &chapter, &version, &status, &released)
 		if scanErr != nil {
 			err = scanErr
 		}
@@ -179,7 +169,6 @@ func ListReleases(projectId int, ordering string, db *sql.DB) ([]Release, error)
 			chapter,
 			version,
 			ReleaseStatus(status),
-			checksum,
 			released,
 			projectId,
 		})
@@ -203,7 +192,7 @@ func (r *Release) Save(db *sql.DB) error {
 	if validErr != nil {
 		return validErr
 	}
-	_, err := db.Exec(QSaveRelease, r.Chapter, r.Version, string(r.Status), r.Checksum, r.ReleasedOn, r.ProjectID)
+	_, err := db.Exec(QSaveRelease, r.Chapter, r.Version, string(r.Status), r.ReleasedOn, r.ProjectID)
 	if err != nil {
 		return err
 	}
@@ -221,7 +210,7 @@ func (r *Release) Update(db *sql.DB) error {
 		return validErr
 	}
 	now := time.Now()
-	_, err := db.Exec(QUpdateRelease, r.Chapter, r.Version, string(r.Status), r.Checksum, now, r.Id)
+	_, err := db.Exec(QUpdateRelease, r.Chapter, r.Version, string(r.Status), now, r.Id)
 	r.ReleasedOn = now
 	return err
 }
@@ -247,7 +236,6 @@ func (r *Release) Delete(db *sql.DB) error {
 }
 
 // CreateArchive builds a zip file containing all of the image files of pages that are part of the release.
-// It will also compute the checksum of the zip file and update the release's checksum field if it has changed.
 func (r *Release) CreateArchive(db *sql.DB) ([]byte, error) {
 	pages, listErr := ListPages(r.Id, db)
 	if listErr != nil {
@@ -278,25 +266,5 @@ func (r *Release) CreateArchive(db *sql.DB) ([]byte, error) {
 	}
 	finalizeErr := w.Close()
 	archive := buffer.Bytes()
-	checksum := computeChecksum(archive)
-	if checksum != r.Checksum {
-		r.Checksum = checksum
-		updateErr := r.Update(db)
-		if updateErr != nil {
-			return archive, updateErr
-		}
-	}
 	return archive, finalizeErr
-}
-
-// computeChecksum computes the crc32 checksum of an archive and returns it encoded as hex.
-func computeChecksum(archive []byte) string {
-	cs := crc32.ChecksumIEEE(archive)
-	csBytes := []byte{
-		byte(cs >> 24),
-		byte(cs >> 16),
-		byte(cs >> 8),
-		byte(cs),
-	}
-	return hex.EncodeToString(csBytes[:])
 }

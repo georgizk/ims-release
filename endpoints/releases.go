@@ -139,7 +139,6 @@ type getReleaseResponse struct {
 	ProjectName string               `json:"projectName"`
 	Chapter     string               `json:"chapter"`
 	GroupName   string               `json:"groupName"`
-	Checksum    string               `json:"checksum"`
 	Version     int                  `json:"version"`
 	Status      models.ReleaseStatus `json:"status"`
 	ReleasedOn  time.Time            `json:"releasedOn"`
@@ -161,7 +160,7 @@ func getRelease(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 			fmt.Printf("[---] Parse error: %v || %v\n", parseErr1, parseErr2)
 			w.WriteHeader(http.StatusBadRequest)
 			errMsg := "projectId and releaseId must be integer IDs."
-			encoder.Encode(getReleaseResponse{&errMsg, "", "", "", "", 0, "", time.Now()})
+			encoder.Encode(getReleaseResponse{&errMsg, "", "", "", 0, "", time.Now()})
 			return
 		}
 		request.ProjectID = projectId
@@ -171,7 +170,7 @@ func getRelease(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 			fmt.Printf("[---] Find error:", findErr)
 			w.WriteHeader(http.StatusInternalServerError)
 			errMsg := "Could not find requested project. Please check that the projectId is correct or try again later."
-			encoder.Encode(getReleaseResponse{&errMsg, "", "", "", "", 0, "", time.Now()})
+			encoder.Encode(getReleaseResponse{&errMsg, "", "", "", 0, "", time.Now()})
 			return
 		}
 		release, findErr := models.FindRelease(request.ReleaseID, db)
@@ -179,7 +178,7 @@ func getRelease(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 			fmt.Printf("[---] Find error:", findErr)
 			w.WriteHeader(http.StatusInternalServerError)
 			errMsg := "Could not find requested release. Please check that the releaseId is correct or try again later."
-			encoder.Encode(getReleaseResponse{&errMsg, "", "", "", "", 0, "", time.Now()})
+			encoder.Encode(getReleaseResponse{&errMsg, "", "", "", 0, "", time.Now()})
 			return
 		}
 		encoder.Encode(getReleaseResponse{
@@ -187,7 +186,6 @@ func getRelease(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 			project.Shorthand,
 			release.Chapter,
 			"ims", // TODO - Do we need to support other group names? How?
-			release.Checksum,
 			release.Version,
 			release.Status,
 			release.ReleasedOn,

@@ -75,7 +75,8 @@ func DownloadArchive(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 			w.Write([]byte(errMsg))
 			return
 		}
-		release, lookupErr := models.LookupRelease(request.Chapter, request.Version, request.Checksum, request.ProjectName, db)
+		fmt.Println("Parsed request", request)
+		release, lookupErr := models.LookupRelease(request.Chapter, request.Version, request.ProjectName, db)
 		if lookupErr != nil {
 			fmt.Println("[---] Lookup error:", lookupErr)
 			w.WriteHeader(http.StatusBadRequest)
@@ -153,6 +154,7 @@ func DownloadImage(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 			w.Write([]byte("Could not parse all of the parameters required from the URL."))
 			return
 		}
+		fmt.Println("Parsed request", request)
 		page, findErr := models.LookupPage(request.Page, request.Chapter, request.Version, request.ProjectName, db)
 		if findErr != nil {
 			fmt.Println("[---] Find error:", findErr)
