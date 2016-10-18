@@ -39,10 +39,10 @@ func main() {
 	pagesRouter := router.PathPrefix("/projects/{projectId}/releases/{releaseId}/pages").Subrouter()
 	endpoints.RegisterPageHandlers(pagesRouter, db, &cfg)
 
-	// Should match /{projectName}-{chapter}.{version}/{page}.{ext}
-	router.HandleFunc("/{pc:\\w+-\\w+\\.\\d+}/{page:\\w+\\.\\w+}", endpoints.DownloadImage(db, &cfg)).Methods("GET")
-	// Should match /{projectName}-{chapter}{groupName}{checksum}.{version}.zip
-	router.HandleFunc("/{path:\\w+-\\w+\\[\\w+\\]\\w+\\.\\d+\\.zip}", endpoints.DownloadArchive(db, &cfg)).Methods("GET")
+	// Should match /{projectName} - {chapter}[{version}]/{page}.{ext}
+	router.HandleFunc("/{pc:\\w+\\s-\\s\\w+\\[\\d+\\]}/{page:\\w+\\.\\w+}", endpoints.DownloadImage(db, &cfg)).Methods("GET")
+	// Should match /{projectName} - {chapter}[{version}][{groupName}].zip
+	router.HandleFunc("/{path:\\w+\\s-\\s\\w+\\[\\d+\\]\\[\\w+\\]\\.zip}", endpoints.DownloadArchive(db, &cfg)).Methods("GET")
 
 	address := "0.0.0.0:3000"
 	fmt.Printf("Listening on %s\n", address)
