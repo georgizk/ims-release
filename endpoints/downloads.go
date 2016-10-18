@@ -39,33 +39,27 @@ type getArchiveRequest struct {
 func parseDownloadArchiveRequest(path string) (getArchiveRequest, error) {
 	req := getArchiveRequest{}
 
-	// Expect the url to be formatted {projectName}-{chapter}{groupName}{checksum}.{version}.zip
-	// Note that "groupName" will be surrounded in square brackets like [groupName].
+	// Expect the url to be formatted {projectName} - {chapter}[{version}][{groupName}].zip
 	parts := strings.Split(path, "-")
 	if len(parts) != 2 {
 		return getArchiveRequest{}, ErrInvalidURLFormat
 	}
-	req.ProjectName = parts[0]
-	parts = strings.Split(parts[1], ".")
+	req.ProjectName = strings.Trim(parts[0], " ")
+	parts = strings.Split(parts[1], "[")
 	if len(parts) != 3 {
 		return getArchiveRequest{}, ErrInvalidURLFormat
 	}
-	version, parseErr := strconv.Atoi(parts[1])
+	req.Chapter = strings.Trim(parts[0], " ")
+	version, parseErr := strconv.Atoi(strings.Trim(parts[1], "]"))
 	if parseErr != nil {
 		return getArchiveRequest{}, parseErr
 	}
 	req.Version = version
-	parts = strings.Split(parts[0], "[")
+	parts = strings.Split(parts[2], ".")
 	if len(parts) != 2 {
 		return getArchiveRequest{}, ErrInvalidURLFormat
 	}
-	req.Chapter = parts[0]
-	parts = strings.Split(parts[1], "]")
-	if len(parts) != 2 {
-		return getArchiveRequest{}, ErrInvalidURLFormat
-	}
-	req.GroupName = parts[0]
-	req.Checksum = parts[1]
+	req.GroupName = strings.Trim(parts[0], "]")
 
 	return req, nil
 }
