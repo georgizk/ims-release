@@ -23,7 +23,7 @@ Any parameter that is optional will have a type prefixed with `optional`. For ex
 ### Download an archive of a release
 
 ```
-GET /{projectName}-{chapter}{groupName}{checksum}.{version}.zip
+GET /{projectName} - {chapter}[{version}][{groupName}].zip
 ```
 
 * Downloads the release archive
@@ -31,6 +31,11 @@ GET /{projectName}-{chapter}{groupName}{checksum}.{version}.zip
 * The archive may not contain any folders
 * The archive must contain a credit page.
 
+Note that the square brackets are meant to be present in the actual URL. For example, one may request the following.
+
+```
+GET /Robotics;Notes - Ch12[1][ims].zip
+```
 
 #### Parameters
 
@@ -40,8 +45,8 @@ Name | Type | Description
 -----|------|------------
 projectName | string | The name of a project
 chapter | string | The id of the release
-groupName | string | The shorthand name of the scanlation group, e.g. ims
 version | integer | The version number of the release, starting from 1
+groupName | string | The shorthand name of the scanlation group, e.g. ims
 
 #### Response
 
@@ -52,11 +57,13 @@ version | integer | The version number of the release, starting from 1
 ### Download a single image
 
 ```
-GET /{projectName}-{chapter}.{version}/{page}.{ext}
+GET /{projectName} - {chapter}[{version}]/{page}.{ext}
 ```
 
 * Downloads the requested image from the archive
 * The route is valid even if the release is not in released state
+
+Note that, like with the `Download an archive of a release` endpoint, the square brackets are meant to be explicitly part of the requested URL.
 
 #### Parameters
 
