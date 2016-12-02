@@ -33,17 +33,11 @@ func main() {
 	}
 
 	router := mux.NewRouter()
-	projectsRouter := router.PathPrefix("/projects").Subrouter()
-	endpoints.RegisterProjectHandlers(projectsRouter, db, &cfg)
-	releasesRouter := router.PathPrefix("/projects/{projectId}/releases").Subrouter()
-	endpoints.RegisterReleaseHandlers(releasesRouter, db, &cfg)
-	pagesRouter := router.PathPrefix("/projects/{projectId}/releases/{releaseId}/pages").Subrouter()
-	endpoints.RegisterPageHandlers(pagesRouter, db, &cfg)
-
-	// Should match /{projectName} - {chapter}[{version}]/{page}.{ext}
-	router.HandleFunc("/{pc:\\w+\\s-\\s\\w+\\[\\d+\\]}/{page:\\w+\\.\\w+}", endpoints.DownloadImage(db, &cfg)).Methods("GET")
-	// Should match /{projectName} - {chapter}[{version}][{groupName}].zip
-	router.HandleFunc("/{path:\\w+\\s-\\s\\w+\\[\\d+\\]\\[\\w+\\]\\.zip}", endpoints.DownloadArchive(db, &cfg)).Methods("GET")
+	router.StrictSlash(true)
+	endpoints.RegisterProjectHandlers(router, db, &cfg)
+	endpoints.RegisterReleaseHandlers(router, db, &cfg)
+	endpoints.RegisterPageHandlers(router, db, &cfg)
+	endpoints.RegisterDownloadHandlers(router, db, &cfg)
 
 	address := cfg.BindAddress
 	fmt.Printf("Listening on %s\n", address)

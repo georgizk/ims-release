@@ -50,9 +50,11 @@ func randomFilename(cfg *config.Config, ext string) string {
 // to handle incoming requests to the appropriate endpoint using a subrouter with an
 // appropriate prefix, specified in main.
 func RegisterPageHandlers(r *mux.Router, db *sql.DB, cfg *config.Config) {
-	r.HandleFunc("/", listPages(db, cfg)).Methods("GET")
-	r.HandleFunc("/", createPage(db, cfg)).Methods("POST")
-	r.HandleFunc("/{pageId}", deletePage(db, cfg)).Methods("DELETE")
+  root := "/projects/{projectId}/releases/{releaseId}/pages"
+	sr := r.PathPrefix(root).Subrouter()
+	r.HandleFunc(root, listPages(db, cfg)).Methods("GET")
+	r.HandleFunc(root, createPage(db, cfg)).Methods("POST")
+	sr.HandleFunc("/{pageId}", deletePage(db, cfg)).Methods("DELETE")
 }
 
 // GET /projects/{projectId}/releases/{releaseId}/pages

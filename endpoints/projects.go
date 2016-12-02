@@ -18,11 +18,13 @@ import (
 // to handle incoming requests to the appropriate endpoint using a subrouter with an
 // appropriate prefix, specified in main.
 func RegisterProjectHandlers(r *mux.Router, db *sql.DB, cfg *config.Config) {
-	r.HandleFunc("/", listProjects(db, cfg)).Methods("GET")
-	r.HandleFunc("/", createProject(db, cfg)).Methods("POST")
-	r.HandleFunc("/{projectId}", getProject(db, cfg)).Methods("GET")
-	r.HandleFunc("/{projectId}", updateProject(db, cfg)).Methods("PUT")
-	r.HandleFunc("/{projectId}", deleteProject(db, cfg)).Methods("DELETE")
+  root := "/projects"
+	sr := r.PathPrefix(root).Subrouter()
+	r.HandleFunc(root, listProjects(db, cfg)).Methods("GET")
+	r.HandleFunc(root, createProject(db, cfg)).Methods("POST")
+	sr.HandleFunc("/{projectId}", getProject(db, cfg)).Methods("GET")
+	sr.HandleFunc("/{projectId}", updateProject(db, cfg)).Methods("PUT")
+	sr.HandleFunc("/{projectId}", deleteProject(db, cfg)).Methods("DELETE")
 }
 
 // GET /projects

@@ -25,6 +25,13 @@ var (
 	ErrInvalidURLFormat = errors.New("The URL you requested is not formatted correctly and appears to be missing data.")
 )
 
+func RegisterDownloadHandlers(r *mux.Router, db *sql.DB, cfg *config.Config) {
+	// Should match /{projectName} - {chapter}[{version}]/{page}.{ext}
+	r.HandleFunc("/{pc:\\w+\\s-\\s\\w+\\[\\d+\\]}/{page:\\w+\\.\\w+}", downloadImage(db, cfg)).Methods("GET")
+	// Should match /{projectName} - {chapter}[{version}][{groupName}].zip
+	r.HandleFunc("/{path:\\w+\\s-\\s\\w+\\[\\d+\\]\\[\\w+\\]\\.zip}", downloadArchive(db, cfg)).Methods("GET")
+}
+
 // GET /{projectName}-{chapter}{groupName}{checksum}.{version}.zip
 type getArchiveRequest struct {
 	ProjectName string
@@ -65,7 +72,7 @@ func parseDownloadArchiveRequest(path string) (getArchiveRequest, error) {
 }
 
 // DownloadArchive prepares and downloads the latest version of an archive for a particular release.
-func DownloadArchive(db *sql.DB, cfg *config.Config) http.HandlerFunc {
+func downloadArchive(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		request, parseErr := parseDownloadArchiveRequest(mux.Vars(r)["path"])
 		if parseErr != nil {
@@ -141,7 +148,7 @@ func parseDownloadImageRequest(pac, pnum string) (getPageRequest, error) {
 }
 
 // DownloadImage retrieves the contents of a page from disk.
-func DownloadImage(db *sql.DB, cfg *config.Config) http.HandlerFunc {
+func downloadImage(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		projectAndChapter := vars["pc"]

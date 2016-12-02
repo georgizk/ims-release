@@ -18,11 +18,13 @@ import (
 // to handle incoming requests to the appropriate endpoint using a subrouter with an
 // appropriate prefix, specified in main.
 func RegisterReleaseHandlers(r *mux.Router, db *sql.DB, cfg *config.Config) {
-	r.HandleFunc("/", listReleases(db, cfg)).Methods("GET")
-	r.HandleFunc("/", createRelease(db, cfg)).Methods("POST")
-	r.HandleFunc("/{releaseId}", getRelease(db, cfg)).Methods("GET")
-	r.HandleFunc("/{releaseId}", updateRelease(db, cfg)).Methods("PUT")
-	r.HandleFunc("/{releaseId}", deleteRelease(db, cfg)).Methods("DELETE")
+  root := "/projects/{projectId}/releases"
+	sr := r.PathPrefix(root).Subrouter()
+	r.HandleFunc(root, listReleases(db, cfg)).Methods("GET")
+	r.HandleFunc(root, createRelease(db, cfg)).Methods("POST")
+	sr.HandleFunc("/{releaseId}", getRelease(db, cfg)).Methods("GET")
+	sr.HandleFunc("/{releaseId}", updateRelease(db, cfg)).Methods("PUT")
+	sr.HandleFunc("/{releaseId}", deleteRelease(db, cfg)).Methods("DELETE")
 }
 
 // GET /projects/{projectId}/releases
