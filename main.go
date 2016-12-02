@@ -44,7 +44,7 @@ func main() {
 	// Should match /{projectName} - {chapter}[{version}][{groupName}].zip
 	router.HandleFunc("/{path:\\w+\\s-\\s\\w+\\[\\d+\\]\\[\\w+\\]\\.zip}", endpoints.DownloadArchive(db, &cfg)).Methods("GET")
 
-	address := "0.0.0.0:3000"
+	address := cfg.BindAddress
 	fmt.Printf("Listening on %s\n", address)
 	http.ListenAndServe(address, router)
 }
