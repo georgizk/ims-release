@@ -1,6 +1,6 @@
 # ims-release
 
-A manga release API for the [IMangaScans](https://imangascans.org/) scanlation group.
+A manga release API for the [Imangascans](https://imangascans.org/) scanlation group.
 
 Its core features are:
 
@@ -13,21 +13,6 @@ Its core features are:
 Upcoming features including:
 
 * Support for managing information about staff
-
-## Configuration
-
-To configure the API service, you can edit the `config/config.json` file. It must contain the following fields:
-
-* `address` - The address to bind the server to in the `<ip>:<port>` format. The `ip` should usually be `0.0.0.0`.
-* `imageDirectory` - The path to the directory (folder) that pages of manga should be saved to. An absolute pathi is best.
-* `database` - The connection string required to connect to the MySQL database.
-
-The format for the `database` parameter is specified in the [SQL driver library](https://github.com/go-sql-driver/mysql#dsn-data-source-name)'s
-documentation.
-
-```
-[username[:password]@][protocol[(address)]]/dbname[?param1=value1&...&paramN=valueN]
-```
 
 ## Usage
 
@@ -46,7 +31,7 @@ First, download Go from the [official site](https://golang.org/dl/).  After you'
 GOROOT = /usr/local/go
 ```
 
-Assuming you installed Go to the default directory (above). You can verify that your install worked by running
+This guide assumes you installed Go to the default directory (above). You can verify that your install worked by running
 
 ```
 go version
@@ -74,32 +59,29 @@ service mysql start
 Whichever works for your system.  Then, connect to your database server with root permissions and initialize a test database.
 
 ```
-sudo mysql # This will bring you to the mysql prompt, prefixed by "mysql>"
+mysql -u root -p # This will bring you to the mysql prompt, prefixed by "mysql>"
 mysql> create database testing;
 mysql> grant all privileges on testing.* to 'tester'@'localhost' identified by 'password1';
 mysql> set global sql_mode = 'NO_ENGINE_SUBSTITUTION';
 ```
 
-#### Config
+#### Configuration
 
-1. Update the configuration to use the appropriate database and credentials
-2. Create a directory to save images to
+Configuration is done via a json config file. It must contain the following fields:
 
-Update `config/config.json`.  For this local setup, it should contain the following.
+* `address` - The address to bind the server to in the `<ip>:<port>` format. The `ip` should usually be `0.0.0.0`.
+* `imageDirectory` - The path to the directory (folder) where images are stored. An absolute path is best.
+* `database` - The connection string required to connect to the MySQL database.
 
-```json
-{
-  "address": "0.0.0.0:3000",
-  "imageDirectory": "./images",
-  "database": "tester:password1@/testing?parseTime=true"
-}
-```
-
-Make sure that the imageDirectory path exists.
+The format for the `database` parameter is specified in the [SQL driver library](https://github.com/go-sql-driver/mysql#dsn-data-source-name)'s
+documentation.
 
 ```
-mkdir images
+[username[:password]@][protocol[(address)]]/dbname[?param1=value1&...&paramN=valueN]
 ```
+
+Refer to `config.json.example`.
+
 
 ### Running
 
@@ -108,7 +90,7 @@ Once your setup is complete, you can get the API server running by first buildin
 ```
 go get
 go build
-./ims-release
+./ims-release ./config.json
 ```
 
 You should see output like `Listening on 0.0.0.0:3000`.

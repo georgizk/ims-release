@@ -16,9 +16,13 @@ import (
 )
 
 func main() {
-	cfgPath := os.Getenv("CONFIG_FILE")
-	if cfgPath == "" {
-		cfgPath = "./config/config.json"
+	cfgPath := ""
+	if len(os.Args) > 1 {
+		cfgPath = os.Args[1]
+	} else {
+		fmt.Fprintf(os.Stderr, "Usage: ims-release <configPath>\n")
+		fmt.Fprintf(os.Stderr, "You must specify the path to the json configuration file.\n")
+		os.Exit(1)
 	}
 	cfg := config.MustLoad(cfgPath)
 
