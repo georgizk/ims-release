@@ -46,7 +46,7 @@ const (
 	QSaveRelease string = `insert into releases (
 		chapter, version, status, released_on, project_id
 ) values (
-		?, ?, ?, ?, ?, ?
+		?, ?, ?, ?, ?
 );`
 
 	QUpdateRelease string = `update releases set
