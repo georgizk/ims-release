@@ -11,6 +11,7 @@ import (
 	"os"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
 
@@ -46,5 +47,6 @@ func main() {
 
 	address := cfg.BindAddress
 	fmt.Printf("Listening on %s\n", address)
-	http.ListenAndServe(address, router)
+	loggedRouter := handlers.LoggingHandler(os.Stdout, router)
+	http.ListenAndServe(address, loggedRouter)
 }
