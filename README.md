@@ -83,9 +83,9 @@ mysql> set global sql_mode = 'NO_ENGINE_SUBSTITUTION';
 #### Config
 
 1. Update the configuration to use the appropriate database and credentials
-2. Create a directory to svae images to
+2. Create a directory to save images to
 
-The last thing to do is to make sure your `config/config.json` file has the right data.  For this local setup, it should contain the following.
+Update `config/config.json`.  For this local setup, it should contain the following.
 
 ```json
 {
@@ -95,7 +95,7 @@ The last thing to do is to make sure your `config/config.json` file has the righ
 }
 ```
 
-Lastly, make sure you create a the folder that images will be saved to.
+Make sure that the imageDirectory path exists.
 
 ```
 mkdir images
@@ -106,6 +106,7 @@ mkdir images
 Once your setup is complete, you can get the API server running by first building and then executing the server binary with the following commands, run from the `ims-release/` base directory.
 
 ```
+go get
 go build
 ./ims-release
 ```
