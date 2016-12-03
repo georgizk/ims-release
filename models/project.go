@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"time"
+  "../storage_provider"
 )
 
 // ProjectStatus is a type alias which will be used to create an enum of acceptable project status states.
@@ -165,11 +166,11 @@ func (p *Project) Update(db *sql.DB) error {
 }
 
 // Delete removes the Project and all associated releases from the database.
-func (p *Project) Delete(db *sql.DB) error {
+func (p *Project) Delete(db *sql.DB, sp storage_provider.Binary) error {
 	releases, listErr := ListReleases(p.Id, "newest", db)
 	var deleteErr error
 	for _, release := range releases {
-		dErr := release.Delete(db)
+		dErr := release.Delete(db, sp)
 		if dErr != nil {
 			deleteErr = dErr
 		}

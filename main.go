@@ -4,6 +4,7 @@ import (
 	"./config"
 	"./endpoints"
 	"./models"
+	"./storage_provider"
 
 	"database/sql"
 	"fmt"
@@ -36,12 +37,14 @@ func main() {
 		panic(initErr)
 	}
 
+	sp := storage_provider.File{Root: cfg.ImageDirectory}
+
 	router := mux.NewRouter()
 	router.StrictSlash(true)
-	endpoints.RegisterProjectHandlers(router, db, &cfg)
-	endpoints.RegisterReleaseHandlers(router, db, &cfg)
-	endpoints.RegisterPageHandlers(router, db, &cfg)
-	endpoints.RegisterDownloadHandlers(router, db, &cfg)
+	endpoints.RegisterProjectHandlers(router, db, &cfg, &sp)
+	endpoints.RegisterReleaseHandlers(router, db, &cfg, &sp)
+	endpoints.RegisterPageHandlers(router, db, &cfg, &sp)
+	endpoints.RegisterDownloadHandlers(router, db, &cfg, &sp)
 
 	address := cfg.BindAddress
 	fmt.Printf("Listening on %s\n", address)

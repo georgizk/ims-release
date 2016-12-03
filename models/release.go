@@ -5,10 +5,9 @@ import (
 	"bytes"
 	"database/sql"
 	"errors"
-	"io/ioutil"
-	"os"
 	"strings"
 	"time"
+  "../storage_provider"
 )
 
 // ReleaseStatus is a type alias which will be used to create an enum of acceptable release status states.
@@ -216,11 +215,11 @@ func (r *Release) Update(db *sql.DB) error {
 }
 
 // Delete removes the Release and all associated pages from the database.
-func (r *Release) Delete(db *sql.DB) error {
+func (r *Release) Delete(db *sql.DB, sp storage_provider.Binary) error {
 	pages, listErr := ListPages(r.Id, db)
 	var deleteErr error
 	for _, page := range pages {
-		dErr := page.Delete(db)
+		dErr := page.Delete(db, sp)
 		if dErr != nil {
 			deleteErr = dErr
 		}
@@ -236,7 +235,7 @@ func (r *Release) Delete(db *sql.DB) error {
 }
 
 // CreateArchive builds a zip file containing all of the image files of pages that are part of the release.
-func (r *Release) CreateArchive(db *sql.DB) ([]byte, error) {
+func (r *Release) CreateArchive(db *sql.DB, sp storage_provider.Binary) ([]byte, error) {
 	pages, listErr := ListPages(r.Id, db)
 	if listErr != nil {
 		return []byte{}, listErr
@@ -244,15 +243,10 @@ func (r *Release) CreateArchive(db *sql.DB) ([]byte, error) {
 	buffer := new(bytes.Buffer)
 	w := zip.NewWriter(buffer)
 	for _, page := range pages {
-		f, openErr := os.Open(page.Location)
-		if openErr != nil {
-			return []byte{}, openErr
+		imgData, err := sp.Get(page.Location)
+		if err != nil {
+			return []byte{}, err
 		}
-		imgData, readErr := ioutil.ReadAll(f)
-		if readErr != nil {
-			return []byte{}, readErr
-		}
-		f.Close()
 		parts := strings.Split(page.Location, ".")
 		ext := parts[len(parts)-1]
 		f2, openErr := w.Create(page.Number + "." + ext)

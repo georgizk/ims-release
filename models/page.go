@@ -3,8 +3,8 @@ package models
 import (
 	"database/sql"
 	"errors"
-	"os"
 	"time"
+  "../storage_provider"
 )
 
 // Errors pertaining to the data in a Page or operations on Pages.
@@ -173,9 +173,9 @@ func (p *Page) Update(db *sql.DB) error {
 }
 
 // Delete removes the Page from the database and deletes the page image from disk.
-func (p *Page) Delete(db *sql.DB) error {
+func (p *Page) Delete(db *sql.DB, sp storage_provider.Binary) error {
 	_, err := db.Exec(QDeletePage, p.Id)
-	rmErr := os.Remove(p.Location)
+	rmErr := sp.Unset(p.Location)
 	if err != nil {
 		return err
 	}

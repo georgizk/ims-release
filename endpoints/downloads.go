@@ -3,13 +3,12 @@ package endpoints
 import (
 	"../config"
 	"../models"
-
+  "../storage_provider"
+  
 	"database/sql"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 
@@ -25,11 +24,11 @@ var (
 	ErrInvalidURLFormat = errors.New("The URL you requested is not formatted correctly and appears to be missing data.")
 )
 
-func RegisterDownloadHandlers(r *mux.Router, db *sql.DB, cfg *config.Config) {
+func RegisterDownloadHandlers(r *mux.Router, db *sql.DB, cfg *config.Config, sp storage_provider.Binary) {
 	// Should match /{projectName} - {chapter}[{version}]/{page}.{ext}
-	r.HandleFunc("/{pc:\\w+\\s-\\s\\w+\\[\\d+\\]}/{page:\\w+\\.\\w+}", downloadImage(db, cfg)).Methods("GET")
+	r.HandleFunc("/{pc:\\w+\\s-\\s\\w+\\[\\d+\\]}/{page:\\w+\\.\\w+}", downloadImage(db, cfg, sp)).Methods("GET")
 	// Should match /{projectName} - {chapter}[{version}][{groupName}].zip
-	r.HandleFunc("/{path:\\w+\\s-\\s\\w+\\[\\d+\\]\\[\\w+\\]\\.zip}", downloadArchive(db, cfg)).Methods("GET")
+	r.HandleFunc("/{path:\\w+\\s-\\s\\w+\\[\\d+\\]\\[\\w+\\]\\.zip}", downloadArchive(db, cfg, sp)).Methods("GET")
 }
 
 // GET /{projectName}-{chapter}{groupName}{checksum}.{version}.zip
@@ -72,7 +71,7 @@ func parseDownloadArchiveRequest(path string) (getArchiveRequest, error) {
 }
 
 // DownloadArchive prepares and downloads the latest version of an archive for a particular release.
-func downloadArchive(db *sql.DB, cfg *config.Config) http.HandlerFunc {
+func downloadArchive(db *sql.DB, cfg *config.Config, sp storage_provider.Binary) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		request, parseErr := parseDownloadArchiveRequest(mux.Vars(r)["path"])
 		if parseErr != nil {
@@ -91,7 +90,7 @@ func downloadArchive(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 			w.Write([]byte(errMsg))
 			return
 		}
-		archive, buildErr := release.CreateArchive(db)
+		archive, buildErr := release.CreateArchive(db, sp)
 		if buildErr != nil {
 			fmt.Println("[---] Build error:", buildErr)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -148,7 +147,7 @@ func parseDownloadImageRequest(pac, pnum string) (getPageRequest, error) {
 }
 
 // DownloadImage retrieves the contents of a page from disk.
-func downloadImage(db *sql.DB, cfg *config.Config) http.HandlerFunc {
+func downloadImage(db *sql.DB, cfg *config.Config, sp storage_provider.Binary) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		projectAndChapter := vars["pc"]
@@ -169,17 +168,10 @@ func downloadImage(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 			w.Write([]byte("Could not find the requested page. Please ensure that the pageId is correct."))
 			return
 		}
-		f, openErr := os.Open(page.Location)
-		if openErr != nil {
-			fmt.Println("[---] Open error:", openErr)
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("Could not read the page file. Please try again later."))
-			return
-		}
-		imageBytes, readErr := ioutil.ReadAll(f)
-		defer f.Close()
-		if readErr != nil {
-			fmt.Println("[---] Open error:", openErr)
+    
+    imageBytes, err := sp.Get(page.Location)
+		if err != nil {
+			fmt.Println("[---] error:", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte("Could not read the page file. Please try again later."))
 			return
