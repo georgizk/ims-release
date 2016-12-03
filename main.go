@@ -49,5 +49,6 @@ func main() {
 	address := cfg.BindAddress
 	fmt.Printf("Listening on %s\n", address)
 	loggedRouter := handlers.LoggingHandler(os.Stdout, router)
-	http.ListenAndServe(address, loggedRouter)
+	corsRouter := handlers.CORS(handlers.AllowedOrigins([]string{"*"}))(loggedRouter)
+	http.ListenAndServe(address, corsRouter)
 }
