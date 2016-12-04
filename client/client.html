@@ -1,0 +1,144 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>IMS API</title>
+  <link rel="stylesheet" type="text/css" href="DataTables/datatables.min.css"/>   
+  <link rel="stylesheet" href="fancybox/jquery.fancybox.css" type="text/css" media="screen" />
+  <script type="text/javascript" src="jquery-3.1.1.min.js"></script>
+  <script type="text/javascript" src="fancybox/jquery.fancybox.pack.js"></script>
+  <script type="text/javascript" src="DataTables/datatables.min.js"></script>
+  <script type="text/javascript" src="client.js"></script>
+  <script type="text/javascript" src="app.js"></script>
+</head>
+
+<body>
+
+<div>
+<h2>Projects</h2>
+<table id="projects">
+<thead>
+  <tr>
+    <th>ID</th>
+    <th>Name</th>
+    <th>Shorthand</th>
+    <th>Description</th>
+    <th>Status</th>
+    <th>Date</th>
+  </tr>
+</thead>
+</table>
+
+<ul>
+  <li><a class="overlay" id="projectAddButton" href="#projectAdd">Add</a></li>
+  <li><a class="overlay" id="projectEditButton" href="#projectEdit">Edit</a></li>
+  <li><a class="overlay" id="projectDeleteButton" href="#projectDelete">Delete</a></li>
+</ul>
+
+<div id="projectAdd" style="display:none;">
+<form id="projectAddForm">
+  <label>Name <input type="text" name="name"></label>
+  <label>Shorthand <input type="text" name="projectName"></label>
+  <label>Description <textarea name="description"></textarea></label>
+  <label>Status <select name="status"><option value="ongoing">Ongoing</option><option value="published">Published</option></select>
+  <input type="submit" value="Create">
+</form>
+</div>
+
+<div id="projectEdit" style="display:none;">
+<form id="projectEditForm">
+  <label>Name <input type="text" name="name"></label>
+  <label>Shorthand <input type="text" name="projectName"></label>
+  <label>Description <textarea name="description"></textarea></label>
+  <label>Status <select name="status"><option value="ongoing">Ongoing</option><option value="published">Published</option></select>
+  <input type="submit" value="Save">
+</form>
+</div>
+
+<div id="projectDelete" style="display:none;">
+<p>Are you sure?</p>
+<button id="projectDeleteConfirm">Yes</button>
+<button class="cancel">No</button>
+</div>
+
+<div>
+<h2>Releases</h2>
+<table id="releases">
+<thead>
+  <tr>
+    <th>ID</th>
+    <th>Project ID</th>
+    <th>Identifier</th>
+    <th>Version</th>
+    <th>Status</th>
+    <th>Date</th>
+  </tr>
+</thead>
+</table>
+
+<ul>
+  <li><a class="overlay" id="releaseAddButton" href="#releaseAdd">Add</a></li>
+  <li><a class="overlay" id="releaseEditButton" href="#releaseEdit">Edit</a></li>
+  <li><a class="overlay" id="releaseDeleteButton" href="#releaseDelete">Delete</a></li>
+</ul>
+
+<div id="releaseAdd" style="display:none;">
+<form id="releaseAddForm">
+  <label>Identifier <input type="text" name="chapter"></label>
+  <label>Version <input type="text" name="version"></label>
+  <label>Status <select name="status"><option value="draft">Draft</option><option value="released">Released</option></select>
+  <input type="submit" value="Create">
+</form>
+</div>
+
+<div id="releaseEdit" style="display:none;">
+<form id="releaseEditForm">
+  <label>Identifier <input type="text" name="chapter"></label>
+  <label>Version <input type="text" name="version"></label>
+  <label>Status <select name="status"><option value="draft">Draft</option><option value="released">Released</option></select>
+  <input type="submit" value="Save">
+</form>
+</div>
+
+<div id="releaseDelete" style="display:none;">
+<p>Are you sure?</p>
+<button id="releaseDeleteConfirm">Yes</button>
+<button class="cancel">No</button>
+</div>
+</div>
+
+<div>
+<h2>Pages</h2>
+<table id="pages">
+<thead>
+  <tr>
+    <th>ID</th>
+    <th>Release ID</th>
+    <th>Page</th>
+    <th>Date</th>
+  </tr>
+</thead>
+</table>
+
+<ul>
+  <li><a class="overlay" id="pageAddButton" href="#pageAdd">Add</a></li>
+  <li><a class="overlay" id="pageDeleteButton" href="#pageDelete">Delete</a></li>
+</ul>
+
+<div id="pageAdd" style="display:none;">
+<form id="pageAddForm">
+  <input type="file" id="pagesToUpload" multiple>
+  <input type="submit" value="Upload">
+</form>
+</div>
+
+<div id="pageDelete" style="display:none;">
+<p>Are you sure?</p>
+<button id="pageDeleteConfirm">Yes</button>
+<button class="cancel">No</button>
+</div>
+</div>
+
+</body>
+
+</html>
