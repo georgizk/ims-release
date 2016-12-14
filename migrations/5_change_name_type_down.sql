@@ -1,0 +1,1 @@
+ALTER TABLE `pages` CHANGE COLUMN `name` `name` BINARY(255) NOT NULL;

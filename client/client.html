@@ -40,7 +40,7 @@
   <label>Name <input type="text" name="name"></label>
   <label>Shorthand <input type="text" name="projectName"></label>
   <label>Description <textarea name="description"></textarea></label>
-  <label>Status <select name="status"><option value="ongoing">Ongoing</option><option value="published">Published</option></select>
+  <label>Status <select name="status"><option value="active">Active</option><option value="completed">Completed</option><option value="stalled">Stalled</option><option value="dropped">Dropped</option></select></label>
   <input type="submit" value="Create">
 </form>
 </div>
@@ -50,7 +50,7 @@
   <label>Name <input type="text" name="name"></label>
   <label>Shorthand <input type="text" name="projectName"></label>
   <label>Description <textarea name="description"></textarea></label>
-  <label>Status <select name="status"><option value="ongoing">Ongoing</option><option value="published">Published</option></select>
+  <label>Status <select name="status"><option value="active">Active</option><option value="completed">Completed</option><option value="stalled">Stalled</option><option value="dropped">Dropped</option></select></label>
   <input type="submit" value="Save">
 </form>
 </div>
@@ -67,7 +67,6 @@
 <thead>
   <tr>
     <th>ID</th>
-    <th>Project ID</th>
     <th>Identifier</th>
     <th>Version</th>
     <th>Status</th>
@@ -84,7 +83,7 @@
 
 <div id="releaseAdd" style="display:none;">
 <form id="releaseAddForm">
-  <label>Identifier <input type="text" name="chapter"></label>
+  <label>Identifier <input type="text" name="identifier"></label>
   <label>Version <input type="text" name="version"></label>
   <label>Status <select name="status"><option value="draft">Draft</option><option value="released">Released</option></select>
   <input type="submit" value="Create">
@@ -93,7 +92,7 @@
 
 <div id="releaseEdit" style="display:none;">
 <form id="releaseEditForm">
-  <label>Identifier <input type="text" name="chapter"></label>
+  <label>Identifier <input type="text" name="identifier"></label>
   <label>Version <input type="text" name="version"></label>
   <label>Status <select name="status"><option value="draft">Draft</option><option value="released">Released</option></select>
   <input type="submit" value="Save">
@@ -113,8 +112,7 @@
 <thead>
   <tr>
     <th>ID</th>
-    <th>Release ID</th>
-    <th>Page</th>
+    <th>Name</th>
     <th>Date</th>
   </tr>
 </thead>

@@ -8,12 +8,12 @@ var imsApiClient = (function() {
       }
     },  
       
-    // status : ongoing, published
-    Project: function(name, projectName, description, status)
+    // status : completed, active, stalled, dropped
+    Project: function(name, shorthand, description, status)
     {
       return {
         name: name,
-        projectName: projectName,
+        shorthand: shorthand,
         description: description,
         status: status,
       }
@@ -21,10 +21,10 @@ var imsApiClient = (function() {
 
     // status : draft, released
     // version: an integer
-    Release: function(chapter, version, status)
+    Release: function(identifier, version, status)
     {
       return {
-        chapter: chapter,
+        identifier: identifier,
         version: version,
         status: status,
       }
@@ -34,7 +34,7 @@ var imsApiClient = (function() {
     Page: function(name, data)
     {
       return {
-        page: name,
+        name: name,
         data: data,
       }
     },

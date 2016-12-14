@@ -1,0 +1,1 @@
+ALTER TABLE `releases` CHANGE COLUMN `identifier` `identifier` BINARY(10) NOT NULL;

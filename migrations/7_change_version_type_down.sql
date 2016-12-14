@@ -1,0 +1,1 @@
+ALTER TABLE `releases` CHANGE COLUMN `version` `version` INT NOT NULL;

@@ -1,0 +1,1 @@
+ALTER TABLE `releases` CHANGE COLUMN `identifier` `identifier` VARBINARY(10) NOT NULL;

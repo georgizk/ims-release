@@ -62,7 +62,7 @@ var imsApiApp = function() {
         columns: [
             { data: 'id' },
             { data: 'name' },
-            { data: 'projectName' },
+            { data: 'shorthand' },
             { data: 'description' },
             { data: 'status' },
             { data: 'createdAt' },
@@ -132,8 +132,7 @@ var imsApiApp = function() {
         data: [],
         columns: [
             { data: 'id' },
-            { data: 'projectId' },
-            { data: 'chapter' },
+            { data: 'identifier' },
             { data: 'version' },
             { data: 'status' },
             { data: 'releasedOn' },
@@ -143,7 +142,9 @@ var imsApiApp = function() {
       imsApiApp.createSelectionCallback(releasesTableId, function(row) {
         var cols = row.find('td')
         var id = $(cols[0]).text()
-        var projectId = $(cols[1]).text()
+        
+        var slectedProjectCols = $(projectsTableId + ' tr.selected td')
+        var projectId = $(slectedProjectCols[0]).text()
         
         console.log("loading pages for project " + projectId + " and release " + id)
         var table = $(pagesTableId).DataTable()
@@ -152,9 +153,9 @@ var imsApiApp = function() {
 
         var editForm = $(releaseEditFormId)
         var fields = editForm.find(':input')
-        $(fields[0]).val($(cols[2]).text())
-        $(fields[1]).val($(cols[3]).text())
-        $(fields[2]).val($(cols[4]).text())
+        $(fields[0]).val($(cols[1]).text())
+        $(fields[1]).val($(cols[2]).text())
+        $(fields[2]).val($(cols[3]).text())
         
         editForm.off('submit')
         editForm.submit(imsApiApp.createSubmitCallback(function(data) {
@@ -223,8 +224,7 @@ var imsApiApp = function() {
         data: [],
         columns: [
             { data: 'id' },
-            { data: 'releaseId' },
-            { data: 'page' },
+            { data: 'name' },
             { data: 'createdAt' }
         ]
       })
@@ -236,8 +236,9 @@ var imsApiApp = function() {
         var cols = row.find('td')
         var pageId = $(cols[0]).text()
         var slectedProjectCols = $(projectsTableId + ' tr.selected td')
+        var slectedReleaseCols = $(releasesTableId + ' tr.selected td')
         var projectId = $(slectedProjectCols[0]).text()
-        var releaseId = $(cols[1]).text()
+        var releaseId = $(slectedReleaseCols[0]).text()
         deleteButton.click(function(e) {
           e.preventDefault()
           imsApiClient.deletePage(config, projectId, releaseId, pageId, function(r) {

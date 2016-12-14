@@ -8,15 +8,18 @@ import (
 
 	"database/sql"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 
+	"github.com/DavidHuie/gomigrate"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
 
 func main() {
+	log.SetFlags(log.LstdFlags | log.Llongfile)
 	cfgPath := ""
 	if len(os.Args) > 1 {
 		cfgPath = os.Args[1]
@@ -32,6 +35,8 @@ func main() {
 		panic(err)
 	}
 
+	Migrate(db)
+
 	initErr := models.InitDB(db)
 	if initErr != nil {
 		panic(initErr)
@@ -44,14 +49,19 @@ func main() {
 	endpoints.RegisterProjectHandlers(router, db, &cfg, &sp)
 	endpoints.RegisterReleaseHandlers(router, db, &cfg, &sp)
 	endpoints.RegisterPageHandlers(router, db, &cfg, &sp)
-	endpoints.RegisterDownloadHandlers(router, db, &cfg, &sp)
 
 	address := cfg.BindAddress
-	fmt.Printf("Listening on %s\n", address)
+	log.Printf("Listening on %s\n", address)
 	loggedRouter := handlers.LoggingHandler(os.Stdout, router)
 	corsRouter := handlers.CORS(
 		handlers.AllowedOrigins([]string{"*"}),
 		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE"}))(loggedRouter)
 
 	http.ListenAndServe(address, corsRouter)
+}
+
+func Migrate(db *sql.DB) error {
+	migrator, _ := gomigrate.NewMigrator(db, gomigrate.Mysql{}, "./migrations")
+	err := migrator.Migrate()
+	return err
 }

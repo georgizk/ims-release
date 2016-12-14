@@ -3,13 +3,15 @@ package endpoints
 import (
 	"../config"
 	"../models"
-  "../storage_provider"
+	"../storage_provider"
 
+	"archive/zip"
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -19,20 +21,20 @@ import (
 // to handle incoming requests to the appropriate endpoint using a subrouter with an
 // appropriate prefix, specified in main.
 func RegisterReleaseHandlers(r *mux.Router, db *sql.DB, cfg *config.Config, sp storage_provider.Binary) {
-  root := "/projects/{projectId}/releases"
+	root := "/projects/{projectId:[0-9]+}/releases"
 	sr := r.PathPrefix(root).Subrouter()
 	r.HandleFunc(root, listReleases(db, cfg)).Methods("GET")
 	r.HandleFunc(root, createRelease(db, cfg)).Methods("POST")
-	sr.HandleFunc("/{releaseId}", getRelease(db, cfg)).Methods("GET")
-	sr.HandleFunc("/{releaseId}", updateRelease(db, cfg)).Methods("PUT")
-	sr.HandleFunc("/{releaseId}", deleteRelease(db, cfg, sp)).Methods("DELETE")
+	sr.HandleFunc("/{releaseId:[0-9]+}", getRelease(db, cfg)).Methods("GET")
+	sr.HandleFunc("/{releaseId:[0-9]+}", updateRelease(db, cfg)).Methods("PUT")
+	sr.HandleFunc("/{releaseId:[0-9]+}", deleteRelease(db, cfg)).Methods("DELETE")
+	sr.HandleFunc("/{releaseId:[0-9]+}/download/{name:.*}", downloadRelease(db, cfg, sp)).Methods("GET")
 }
 
 // GET /projects/{projectId}/releases
 
 type listReleasesRequest struct {
-	ProjectID int
-	Ordering  string
+	ProjectID uint32
 }
 
 type listReleasesResponse struct {
@@ -46,26 +48,21 @@ type listReleasesResponse struct {
 func listReleases(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		pid := mux.Vars(r)["projectId"]
-		projectId, parseErr := strconv.Atoi(pid)
-		request := listReleasesRequest{0, "newest"}
-		orderings, found := r.URL.Query()["ordering"]
-		if found {
-			request.Ordering = orderings[0]
-		}
+		vars := mux.Vars(r)
+		request := listReleasesRequest{0}
+		_, parseErr := fmt.Sscanf(vars["projectId"], "%d", &request.ProjectID)
 
 		encoder := json.NewEncoder(w)
 		if parseErr != nil {
-			fmt.Println("[---] Parse error:", parseErr)
+			log.Println("[---] Parse error:", parseErr)
 			w.WriteHeader(http.StatusBadRequest)
 			errMsg := "projectId must be an integer ID."
 			encoder.Encode(listReleasesResponse{&errMsg, []models.Release{}})
 			return
 		}
-		request.ProjectID = projectId
-		releases, listErr := models.ListReleases(request.ProjectID, request.Ordering, db)
+		releases, listErr := models.ListReleases(db, request.ProjectID)
 		if listErr != nil {
-			fmt.Println("[---] List error:", listErr)
+			log.Println("[---] List error:", listErr)
 			w.WriteHeader(http.StatusInternalServerError)
 			errMsg := "Could not list releases. Please check that the projectId is correct or try again later."
 			encoder.Encode(listReleasesResponse{&errMsg, []models.Release{}})
@@ -78,16 +75,16 @@ func listReleases(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 // POST /projects/{projectId}/releases
 
 type createReleaseRequest struct {
-	ProjectID int                  // Pulled from the URL parameters
-	Chapter   string               `json:"chapter"`
-	Version   int                  `json:"version"`
-	Status    models.ReleaseStatus `json:"status"`
+	ProjectID  uint32 // Pulled from the URL parameters
+	Identifier string `json:"identifier"`
+	Version    uint32 `json:"version"`
+	Status     string `json:"status"`
 }
 
 type createReleaseResponse struct {
 	Error   *string `json:"error"`
 	Success bool    `json:"success"`
-	Id      int     `json:"id"`
+	Id      uint32  `json:"id"`
 }
 
 // createRelease inserts a new release into the database.
@@ -95,35 +92,42 @@ func createRelease(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		request := createReleaseRequest{}
-		projectId, parseErr := strconv.Atoi(mux.Vars(r)["projectId"])
+		vars := mux.Vars(r)
+		_, parseErr := fmt.Sscanf(vars["projectId"], "%d", &request.ProjectID)
 		decoder := json.NewDecoder(r.Body)
 		defer r.Body.Close()
 		decodeErr := decoder.Decode(&request)
 
 		encoder := json.NewEncoder(w)
 		if parseErr != nil {
-			fmt.Println("[---] Parse error:", parseErr)
+			log.Println("[---] Parse error:", parseErr)
 			w.WriteHeader(http.StatusBadRequest)
 			errMsg := "projectId must be an integer project ID."
-			encoder.Encode(createReleaseResponse{&errMsg, false, -1})
+			encoder.Encode(createReleaseResponse{&errMsg, false, 0})
 			return
 		}
-		request.ProjectID = projectId
+
+		project, findErr := models.FindProject(db, request.ProjectID)
+		if findErr != nil {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
 		if decodeErr != nil {
-			fmt.Println("[---] Decode error:", decodeErr)
+			log.Println("[---] Decode error:", decodeErr)
 			w.WriteHeader(http.StatusBadRequest)
 			errMsg := "JSON format error or missing field detected."
-			encoder.Encode(createReleaseResponse{&errMsg, false, -1})
+			encoder.Encode(createReleaseResponse{&errMsg, false, 0})
 			return
 		}
-		release := models.NewRelease(request.ProjectID, request.Version, request.Chapter)
+		release := models.NewRelease(project.Id, request.Version, request.Identifier)
 		release.Status = request.Status
 		insertErr := release.Save(db)
 		if insertErr != nil {
-			fmt.Println("[---] Insert error:", insertErr)
+			log.Println("[---] Insert error:", insertErr)
 			w.WriteHeader(http.StatusInternalServerError)
 			errMsg := "Could not create new release. Please check that the status is valid or try again later."
-			encoder.Encode(createReleaseResponse{&errMsg, false, -1})
+			encoder.Encode(createReleaseResponse{&errMsg, false, 0})
 			return
 		}
 		encoder.Encode(createReleaseResponse{nil, true, release.Id})
@@ -133,18 +137,17 @@ func createRelease(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 // GET /projects/{projectId}/releases/{releaseId}
 
 type getReleaseRequest struct {
-	ProjectID int
-	ReleaseID int
+	ProjectID uint32
+	ReleaseID uint32
 }
 
 type getReleaseResponse struct {
-	Error       *string              `json:"error"`
-	ProjectName string               `json:"projectName"`
-	Chapter     string               `json:"chapter"`
-	GroupName   string               `json:"groupName"`
-	Version     int                  `json:"version"`
-	Status      models.ReleaseStatus `json:"status"`
-	ReleasedOn  time.Time            `json:"releasedOn"`
+	Error      *string   `json:"error"`
+	Identifier string    `json:"identifier"`
+	Scanlator  string    `json:"scanlator"`
+	Version    uint32    `json:"version"`
+	Status     string    `json:"status"`
+	ReleasedOn time.Time `json:"releasedOn"`
 }
 
 // getRelease obtains information about a specific release.
@@ -153,41 +156,36 @@ func getRelease(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		request := getReleaseRequest{}
 		vars := mux.Vars(r)
-		pid := vars["projectId"]
-		rid := vars["releaseId"]
-		projectId, parseErr1 := strconv.Atoi(pid)
-		releaseId, parseErr2 := strconv.Atoi(rid)
+		_, parseErr1 := fmt.Sscanf(vars["projectId"], "%d", &request.ProjectID)
+		_, parseErr2 := fmt.Sscanf(vars["releaseId"], "%d", &request.ReleaseID)
 
 		encoder := json.NewEncoder(w)
 		if parseErr1 != nil || parseErr2 != nil {
-			fmt.Printf("[---] Parse error: %v || %v\n", parseErr1, parseErr2)
+			log.Printf("[---] Parse error: %v || %v\n", parseErr1, parseErr2)
 			w.WriteHeader(http.StatusBadRequest)
 			errMsg := "projectId and releaseId must be integer IDs."
-			encoder.Encode(getReleaseResponse{&errMsg, "", "", "", 0, "", time.Now()})
+			encoder.Encode(getReleaseResponse{&errMsg, "", "", 0, models.RStatusUnknownStr, time.Now()})
 			return
 		}
-		request.ProjectID = projectId
-		request.ReleaseID = releaseId
-		project, findErr := models.FindProject(request.ProjectID, db)
+		project, findErr := models.FindProject(db, request.ProjectID)
 		if findErr != nil {
-			fmt.Printf("[---] Find error:", findErr)
+			log.Printf("[---] Find error:", findErr)
 			w.WriteHeader(http.StatusInternalServerError)
 			errMsg := "Could not find requested project. Please check that the projectId is correct or try again later."
-			encoder.Encode(getReleaseResponse{&errMsg, "", "", "", 0, "", time.Now()})
+			encoder.Encode(getReleaseResponse{&errMsg, "", "", 0, models.RStatusUnknownStr, time.Now()})
 			return
 		}
-		release, findErr := models.FindRelease(request.ReleaseID, db)
+		release, findErr := models.FindRelease(db, project.Id, request.ReleaseID)
 		if findErr != nil {
-			fmt.Printf("[---] Find error:", findErr)
+			log.Printf("[---] Find error:", findErr)
 			w.WriteHeader(http.StatusInternalServerError)
 			errMsg := "Could not find requested release. Please check that the releaseId is correct or try again later."
-			encoder.Encode(getReleaseResponse{&errMsg, "", "", "", 0, "", time.Now()})
+			encoder.Encode(getReleaseResponse{&errMsg, "", "", 0, models.RStatusUnknownStr, time.Now()})
 			return
 		}
 		encoder.Encode(getReleaseResponse{
 			nil,
-			project.Shorthand,
-			release.Chapter,
+			release.Identifier,
 			"ims", // TODO - Do we need to support other group names? How?
 			release.Version,
 			release.Status,
@@ -199,11 +197,11 @@ func getRelease(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 // PUT /projects/{projectId}/releases/{releaseId}
 
 type updateReleaseRequest struct {
-	ProjectID int                  // Pulled from the URL params
-	ReleaseID int                  // Pulled from the URL params
-	Chapter   string               `json:"chapter"`
-	Version   int                  `json:"version"`
-	Status    models.ReleaseStatus `json:"status"`
+	ProjectID  uint32 // Pulled from the URL params
+	ReleaseID  uint32 // Pulled from the URL params
+	Identifier string `json:"identifier"`
+	Version    uint32 `json:"version"`
+	Status     string `json:"status"`
 }
 
 type updateReleaseResponse struct {
@@ -217,37 +215,58 @@ func updateRelease(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		request := updateReleaseRequest{}
 		vars := mux.Vars(r)
-		pid := vars["projectId"]
-		rid := vars["releaseId"]
-		projectId, parseErr1 := strconv.Atoi(pid)
-		releaseId, parseErr2 := strconv.Atoi(rid)
+		_, parseErr1 := fmt.Sscanf(vars["projectId"], "%d", &request.ProjectID)
+		_, parseErr2 := fmt.Sscanf(vars["releaseId"], "%d", &request.ReleaseID)
 		decoder := json.NewDecoder(r.Body)
 		defer r.Body.Close()
 		decodeErr := decoder.Decode(&request)
 
 		encoder := json.NewEncoder(w)
 		if parseErr1 != nil || parseErr2 != nil {
+			log.Println("[---] Parse error")
 			w.WriteHeader(http.StatusBadRequest)
 			errMsg := "projectId and releaseId must both be integer IDs."
 			encoder.Encode(updateReleaseResponse{&errMsg, false})
 			return
 		}
-		request.ProjectID = projectId
-		request.ReleaseID = releaseId
 		if decodeErr != nil {
+			log.Println("[---] Decode error")
 			w.WriteHeader(http.StatusBadRequest)
 			errMsg := "Failed to decode JSON in the request body."
 			encoder.Encode(updateReleaseResponse{&errMsg, false})
 			return
 		}
-		// We could load the release from the database and update its fields but there's no
-		// point doing that when we can have the DB update the right row with the releaseId.
-		release := models.NewRelease(request.ProjectID, request.Version, request.Chapter)
-		release.Id = request.ReleaseID
+
+		release, err := models.FindRelease(db, request.ProjectID, request.ReleaseID)
+		if err != nil {
+			log.Println("[---] Release not found")
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		if release.Version > request.Version {
+			log.Println("[---] Update error: downversioning not allowed")
+			w.WriteHeader(http.StatusExpectationFailed)
+			errMsg := "Downversioning is not allowed."
+			encoder.Encode(updateReleaseResponse{&errMsg, false})
+			return
+		}
+
+		if release.Status != request.Status && release.Version == request.Version && request.Status == models.RStatusReleasedStr {
+			log.Println("[---] Update error: you must upversion when publishing")
+			w.WriteHeader(http.StatusExpectationFailed)
+			errMsg := "Upversioning is mandatory when publishing release."
+			encoder.Encode(updateReleaseResponse{&errMsg, false})
+			return
+		}
+
+		release.Version = request.Version
+		release.Identifier = request.Identifier
 		release.Status = request.Status
+
 		updateErr := release.Update(db)
 		if updateErr != nil {
-			fmt.Println("[---] Update error:", updateErr)
+			log.Println("[---] Update error:", updateErr)
 			w.WriteHeader(http.StatusInternalServerError)
 			errMsg := "Could not update the specified release. Please check that the releaseId is correct or try again later."
 			encoder.Encode(updateReleaseResponse{&errMsg, false})
@@ -260,8 +279,8 @@ func updateRelease(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 // DELETE /projects/{projectId}/releases/{releaseId}
 
 type deleteReleaseRequest struct {
-	ProjectID int
-	ReleaseID int
+	ProjectID uint32
+	ReleaseID uint32
 }
 
 type deleteReleaseResponse struct {
@@ -270,15 +289,13 @@ type deleteReleaseResponse struct {
 }
 
 // deleteRelease deletes a release from the DB and also all associated pages.
-func deleteRelease(db *sql.DB, cfg *config.Config, sp storage_provider.Binary) http.HandlerFunc {
+func deleteRelease(db *sql.DB, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		request := deleteReleaseRequest{}
 		vars := mux.Vars(r)
-		pid := vars["projectId"]
-		rid := vars["releaseId"]
-		projectId, parseErr1 := strconv.Atoi(pid)
-		releaseId, parseErr2 := strconv.Atoi(rid)
+		_, parseErr1 := fmt.Sscanf(vars["projectId"], "%d", &request.ProjectID)
+		_, parseErr2 := fmt.Sscanf(vars["releaseId"], "%d", &request.ReleaseID)
 
 		encoder := json.NewEncoder(w)
 		if parseErr1 != nil || parseErr2 != nil {
@@ -287,20 +304,125 @@ func deleteRelease(db *sql.DB, cfg *config.Config, sp storage_provider.Binary) h
 			encoder.Encode(deleteReleaseResponse{&errMsg, false})
 			return
 		}
-		request.ProjectID = projectId
-		request.ReleaseID = releaseId
-		// We could load the release from the database but it's simpler to just provide the
-		// releaseId and do the deletion in one step.
-		release := models.NewRelease(request.ProjectID, 0, "")
-		release.Id = request.ReleaseID
-		deleteErr := release.Delete(db, sp)
+
+		release, err := models.FindRelease(db, request.ProjectID, request.ReleaseID)
+		if err != nil {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		pages, err := models.ListPages(db, request.ReleaseID)
+		if err != nil {
+			log.Println("[---] Delete error:", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			errMsg := "Unexpected error."
+			encoder.Encode(deleteProjectResponse{&errMsg, false})
+			return
+		}
+
+		if len(pages) > 0 {
+			log.Println("[---] Delete error: pages not empty")
+			w.WriteHeader(http.StatusExpectationFailed)
+			errMsg := "All pages must be deleted before deleting a release."
+			encoder.Encode(deleteProjectResponse{&errMsg, false})
+			return
+		}
+
+		deleteErr := release.Delete(db)
 		if deleteErr != nil {
-			fmt.Println("[---] Delete error:", deleteErr)
+			log.Println("[---] Delete error:", deleteErr)
 			w.WriteHeader(http.StatusInternalServerError)
 			errMsg := "Could not delete the release. Please check that the releaseId is correct or try again later."
 			encoder.Encode(deleteReleaseResponse{&errMsg, false})
 			return
 		}
 		encoder.Encode(deleteReleaseResponse{nil, true})
+	}
+}
+
+func downloadRelease(db *sql.DB, cfg *config.Config, sp storage_provider.Binary) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		var projectId uint32
+		var releaseId uint32
+
+		_, parseErr1 := fmt.Sscanf(vars["projectId"], "%d", &projectId)
+		_, parseErr2 := fmt.Sscanf(vars["releaseId"], "%d", &releaseId)
+		archiveName := vars["name"]
+
+		if parseErr1 != nil || parseErr2 != nil {
+			log.Println("failed to parse input parameters")
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		project, err := models.FindProject(db, projectId)
+		if err != nil {
+			log.Println("unable to find project")
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		release, err := models.FindRelease(db, projectId, releaseId)
+		if err != nil {
+			log.Println("unable to find release")
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		if release.Status != models.RStatusReleasedStr {
+			log.Println("the requested release is not in released state")
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		archiveNameExpected := models.GenerateArchiveName(project, release)
+		if archiveNameExpected != archiveName {
+			log.Printf("requested archive name '%s' does not match expected '%s'\n", archiveName, archiveNameExpected)
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		pages, err := models.ListPages(db, release.Id)
+		if err != nil {
+			log.Println("failed to retrieve list of pages")
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		buffer := new(bytes.Buffer)
+		z := zip.NewWriter(buffer)
+
+		for _, page := range pages {
+			filePath := models.GeneratePagePath(project, release, page.Name)
+			imgData, err := sp.Get(filePath)
+			if err != nil {
+				log.Printf("failed to retrieve image data for %s\n", filePath)
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+
+			f, err := z.Create(page.Name)
+			if err != nil {
+				log.Printf("failed to add image %s to archive\n", filePath)
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			_, err = f.Write(imgData)
+			if err != nil {
+				log.Printf("failed to add image %s to archive\n", filePath)
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+		}
+		err = z.Close()
+		if err != nil {
+			log.Printf("failed when finalizing archive\n")
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/zip")
+		w.Write(buffer.Bytes())
 	}
 }

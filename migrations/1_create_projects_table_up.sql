@@ -1,0 +1,12 @@
+DROP TABLE IF EXISTS `pages`;
+DROP TABLE IF EXISTS `releases`;
+DROP TABLE IF EXISTS `projects`;
+CREATE TABLE `projects` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` TEXT,
+  `shorthand` VARBINARY(30) NOT NULL UNIQUE,
+  `description` TEXT NOT NULL,
+  `status` INT UNSIGNED NOT NULL,
+  `created_at` TIMESTAMP NOT NULL,
+PRIMARY KEY(`id`))
+ENGINE=InnoDB DEFAULT CHARSET=utf8;

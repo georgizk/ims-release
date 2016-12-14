@@ -20,78 +20,6 @@ Any parameter that is optional will have a type prefixed with `optional`. For ex
 
 ## Endpoints
 
-### Download an archive of a release
-
-```
-GET /{projectName} - {chapter}[{version}][{groupName}].zip
-```
-
-* Downloads the release archive
-* The route is invalid if the release is not in released state
-* The archive may not contain any folders
-* The archive must contain a credit page.
-
-Note that the square brackets are meant to be present in the actual URL. For example, one may request the following.
-
-```
-GET /Robotics;Notes - Ch12[1][ims].zip
-```
-
-#### Parameters
-
-Instead of this endpoint accepting parameters in the usual URL query parameter format, the name of the zip file requested contains positional arguments in the URL.
-
-Name | Type | Description
------|------|------------
-projectName | string | The name of a project
-chapter | string | The id of the release
-version | integer | The version number of the release, starting from 1
-groupName | string | The shorthand name of the scanlation group, e.g. ims
-
-#### Response
-
-* Status 200: The zip file will be served directly
-* Status 4xx: Invalid request, with a string error message
-* Status 5xx: Server error, with a string error message
-
-### Download a single image
-
-```
-GET /{projectName} - {chapter}[{version}]/{page}.{ext}
-```
-
-* Downloads the requested image from the archive
-* The route is valid even if the release is not in released state
-
-Note that, like with the `Download an archive of a release` endpoint, the square brackets are meant to be explicitly part of the requested URL.
-
-#### Parameters
-
-Instead of this endpoint accepting parameters in the usual URL query parameter format, the name of the image file requested contains positional arguments in the URL.
-
-Name | Type | Description
------|------|------------
-projectName | string | The name of a project
-chapter | string | The chapter number
-version | integer | The version number of the release, starting from 1
-page | string | The page number, starting from 1
-ext | string | The filetype extension of the page's file
-
-#### Response
-
-* Status 200: The image file will be served directly
-* Status 4xx: Invalid request, with a string error message
-* Status 5xx: Server error, with a string error message
-
-In the case of a `Status 2xx` response containing an image, the `Content-Disposition` header will be set to a value of
-the format
-
-```
-Content-Disposition: inline; filename="{page}.{ext}"
-```
-
-Where `page` is the page "number", like "p001", and `ext` is the page's file extension- either "jpg" or "png".
-
 ### Get a list of all projects
 
 ```
@@ -100,15 +28,13 @@ GET /projects
 
 #### Parameters
 
-Name | Type | Description
------|------|------------
-ordering | optional string | Either "newest" or "oldest" for newest first or oldest first respectively
+None
 
 #### Response
 
 Name | Type | Description
 -----|------|------------
-projects | `[{"id": string, "name": string, "createdAt": string}]` | An array containing objects that identify all existing projects
+projects | `[{"id": string, "name": string, "shorthand": string, "description": string, "status": string, "createdAt": string}]` | An array containing objects that identify all existing projects
 
 ### Create a new project
 
@@ -116,14 +42,19 @@ projects | `[{"id": string, "name": string, "createdAt": string}]` | An array co
 POST /projects
 ```
 
+* `shorthand` MUST be unique
+* `shorthand` MUST be less than 31 bytes
+* `name` MUST be less than 65536 bytes
+* `description` MUST be less than 65536 bytes
+
 #### Parameters
 
 Name | Type | Description
 -----|------|------------
 name | string | The human-readable name of the project
-projectName| string | The projectName identifier for archive filenames. Must be unique
+shorthand| string | The shorthand identifier for archive filenames. Must be unique
 description | string | A longer description of the project
-status | string | The current status of the project. One of "ongoing", "complete", "dropped", etc.
+status | string | The current status of the project. One of "active", "completed", "stalled" or "dropped"
 
 #### Response
 
@@ -150,7 +81,7 @@ Name | Type | Description
 -----|------|------------
 createdAt | string | The date when the project was created
 name | string | The descriptive name of the project
-projectName | string | The unique project name shorthand, used in file names
+shorthand | string | The unique project name shorthand, used in file names
 status | string | The current status of the project
 description | string | The description of the project
 
@@ -160,13 +91,19 @@ description | string | The description of the project
 PUT /projects/{projectId}
 ```
 
+* A project with id `projectId` MUST exist
+* `shorthand` MUST be unique
+* `shorthand` MUST be less than 31 bytes
+* `name` MUST be less than 65536 bytes
+* `description` MUST be less than 65536 bytes
+
 #### Paramters
 
 Name | Type | Description
 -----|------|------------
 projectId | integer | The unique identifier for the project
 name | string | A new human-readable name for the project
-projectName | string | A new unique shorthand name, to use in filenames
+shorthand | string | A new unique shorthand name, to use in filenames
 status | string | The new status of the project
 description | string | A new description for the project
 
@@ -182,7 +119,8 @@ success | bool | True if the update could take place, else false
 DELETE /projects/{projectId}
 ```
 
-Also removes all of the releases associated with the project
+* A project with id `projectId` MUST exist
+* There MUST be 0 associated releases
 
 #### Parameters
 
@@ -202,20 +140,19 @@ success | bool | True if the project could be deleted, else false
 GET /projects/{projectId}/releases
 ```
 
-By default, will be ordered by newest to oldest chapter.
+* A project with id `projectId` MUST exist
 
 #### Parameters
 
 Name | Type | Description
 -----|------|------------
 projectId | integer | The unique identifier for the project
-ordering | optional string | Either "newest" or "oldest" to specify whether the newest or oldest releases should be listed first
 
 #### Response
 
 Name | Type | Description
 -----|------|------------
-releases | `[{"id": integer, "releasedOn": string, "version": integer}]` | An array of objects containing information about releases
+releases | `[{"id": integer, "identifier": string, "scanlator": string, "status": string, "releasedOn": string, "version": integer}]` | An array of objects containing information about releases
 
 ### Create a new release
 
@@ -225,11 +162,15 @@ POST /projects/{projectId}/releases
 
 #### Parameters
 
+* A project with id `projectId` MUST exist
+* `identifier` MUST be unique for that project
+* `identifier` MUST be less than 11 bytes
+
 Name | Type | Description
 -----|------|------------
-chapter | string | The number of the chapter
+identifier | string | A unique identifier for the chapter
 version | integer | The version of the release of the particular chapter
-status | string | The release status, e.g. "released" or "draft"
+status | string | The release status, "released" or "draft"
 
 #### Response
 
@@ -244,6 +185,9 @@ id | integer | The newly created id of the release if successful
 GET /projects/{projectId}/releases/{releaseId}
 ```
 
+* A project with id `projectId` MUST exist
+* A release with id `releaseId` MUST exist
+
 #### Parameters
 
 Name | Type | Description
@@ -255,14 +199,20 @@ releaseId | integer | The unique id of the release
 
 Name | Type | Description
 -----|------|------------
-projectName | string | The unique projectName of the project that the release was created for
-chapter | string | The integer number of the chapter the release contains
-groupName | string | "ims"
+identifer | string | The unique identifier for the release
+scanlator | string | The scanlator
 version | integer | The release version number
 status | string | The status of the release
 releasedOn | string | The date that the release was made with its current status
 
 ### Update information about a release
+
+* A project with id `projectId` MUST exist
+* A release with id `releaseId` MUST exist
+* `identifier` MUST be unique for that project
+* `identifier` MUST be less than 11 bytes
+* `version` MUST be greater than or equal to the previous version
+* if `status` is changed from "draft" to "released", `version` MUST be greater than the previous version
 
 ```
 PUT /projects/{projectId}/releases/{releaseId}
@@ -290,7 +240,10 @@ success | bool | True if the update could take place successfully, else false
 DELETE /projects/{projectId}/releases/{releaseId}
 ```
 
-Deletes a release and all associated pages.
+Deletes a release.
+* A project with id `projectId` MUST exist
+* A release with id `releaseId` MUST exist
+* There MUST be 0 associated pages
 
 #### Parameters
 
@@ -305,7 +258,44 @@ Name | Type | Description
 -----|------|------------
 success | bool | True if the project could be deleted, else false
 
+### Download an archive of a release
+
+```
+GET /projects/{projectId}/releases/{releaseId}/download/{archiveName}
+```
+
+* A project with id `projectId` MUST exist
+* A release with id `releaseId` MUST exist
+* The release MUST be in released state
+* The archive MUST NOT contain any folders
+* The archive MUST contain a credit page.
+* Once released, the archive MUST remain unique.
+
+The archive name follows the format {shorthand} - {chapter}[{version}][{groupName}].zip
+Note that the square brackets are meant to be present in the actual URL. For example, one may request the following.
+
+```
+GET /projects/1/release/2/download/Robotics;Notes - Ch12[1][ims].zip
+```
+
+#### Parameters
+
+Name | Type | Description
+-----|------|------------
+projectId | integer | The unique id of the project under which the release was created
+releaseId | integer | The unique id of the release
+archiveName | string | The name of the archive
+
+#### Response
+
+* Status 200: The zip file will be served directly
+* Status 4xx: Invalid request, with a string error message
+* Status 5xx: Server error, with a string error message
+
 ### Get a list of pages in a release
+
+* A project with id `projectId` MUST exist
+* A release with id `releaseId` MUST exist
 
 ```
 GET /projects/{projectId}/releases/{releaseId}/pages
@@ -322,7 +312,7 @@ releaseId | integer | The unique id of the release
 
 Name | Type | Description
 -----|------|------------
-pages | `[{"projectName": string, "chapter": string, "version": integer, "page": string}]`| An array of objects describing each of the pages part of the release
+pages | `[{"id": integer, "name": string, "createdAt": string, "mimeType": string}]`| An array of objects describing each of the pages part of the release
 
 ### Add a new page to a release
 
@@ -330,13 +320,19 @@ pages | `[{"projectName": string, "chapter": string, "version": integer, "page":
 POST /projects/{projectId}/releases/{releaseId}/pages
 ```
 
+* A project with id `projectId` MUST exist
+* A release with id `releaseId` MUST exist
+* `name` MUST end in either .png or .jpg
+* `name` MUST be unique for that release
+* `data` MUST be a base64 encoded image of type matchign the extension in `name`
+
 #### Parameters
 
 Name | Type | Description
 -----|------|------------
 projectId | integer | The unique id of the project under which the release was created
 releaseId | integer | The unique id of the release
-page | string | The page number
+name | string | The page number
 data | string | The base64-encoded raw image data
 
 #### Release
@@ -346,11 +342,37 @@ Name | Type | Description
 success | bool | True if the page could be uploaded, else false e.g. if the release has a completed status
 id | integer | The unique id of the newly created page
 
+### Download a page
+
+```
+GET /projects/{projectId}/releases/{releaseId}/pages/{filename}
+```
+
+* A project with id `projectId` MUST exist
+* A release with id `releaseId` MUST exist
+
+#### Parameters
+
+Name | Type | Description
+-----|------|------------
+projectId | integer | The unique id of the project under which the release was created
+releaseId | integer | The unique id of the release
+filename | string | The filename of the page
+
+#### Response
+
+* Status 200: The image file will be served directly
+* Status 4xx: Invalid request, with a string error message
+* Status 5xx: Server error, with a string error message
+
 ### Delete a page from a release
 
 ```
 DELETE /projects/{projectId}/releases/{releaseId}/pages/{pageId}
 ```
+
+* A project with id `projectId` MUST exist
+* A release with id `releaseId` MUST exist
 
 #### Parameters
 

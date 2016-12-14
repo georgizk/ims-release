@@ -1,27 +1,58 @@
 package models
 
 import (
-	"archive/zip"
-	"bytes"
 	"database/sql"
 	"errors"
-	"strings"
+	"fmt"
 	"time"
-  "../storage_provider"
 )
 
-// ReleaseStatus is a type alias which will be used to create an enum of acceptable release status states.
-type ReleaseStatus string
+// Release contains information about a release, which there are many of under a given Project.  It contains information
+// about which chapter of manga the release was created for, which version of the release of said chapter it is for, and
+// the status of the release of the chapter itself, which may not be final right away.
+type Release struct {
+	Id         uint32    `json:"id"`
+	Identifier string    `json:"identifier"`
+	Scanlator  string    `json:"scanlator"`
+	Version    uint32    `json:"version"`
+	Status     string    `json:"status"`
+	ReleasedOn time.Time `json:"releasedOn"`
+	ProjectID  uint32    `json:"-"`
+}
+
+type ReleaseStatus int
 
 // ReleaseStatus pseudo-enum values
 const (
-	RStatusReleased ReleaseStatus = "released"
-	RStatusDraft    ReleaseStatus = "draft"
+	RStatusUnknown     ReleaseStatus = 0
+	RStatusUnknownStr  string        = "unknown"
+	RStatusReleased    ReleaseStatus = 1
+	RStatusReleasedStr string        = "released"
+	RStatusDraft       ReleaseStatus = 2
+	RStatusDraftStr    string        = "draft"
 )
 
-var (
-	RStatuses = []ReleaseStatus{RStatusReleased, RStatusDraft}
-)
+func (s ReleaseStatus) String() string {
+	switch s {
+	case RStatusReleased:
+		return RStatusReleasedStr
+	case RStatusDraft:
+		return RStatusDraftStr
+	default:
+		return RStatusUnknownStr
+	}
+}
+
+func NewReleaseStatus(val string) ReleaseStatus {
+	switch val {
+	case RStatusReleasedStr:
+		return RStatusReleased
+	case RStatusDraftStr:
+		return RStatusDraft
+	default:
+		return RStatusUnknown
+	}
+}
 
 // Errors pertaining to the data in a Release or operations on Releases.
 var (
@@ -31,133 +62,70 @@ var (
 
 // Database queries for operations on Releases.
 const (
-	QInitTableReleases string = `create table if not exists releases (
-		id int not null auto_increment,
-		chapter varchar(255),
-		version int,
-		status varchar(255),
-		released_on timestamp,
-		project_id int,
-		foreign key(project_id) references projects(id),
-		primary key(id)
-);`
+	t_releases     string = "`releases`"
+	Rc_id          string = "`id`"
+	Rc_identifier  string = "`identifier`"
+	Rc_version     string = "`version`"
+	Rc_status      string = "`status`"
+	Rc_released_on string = "`released_on`"
+	Rc_project_id  string = "`project_id`"
 
-	QSaveRelease string = `insert into releases (
-		chapter, version, status, released_on, project_id
-) values (
-		?, ?, ?, ?, ?
-);`
-
-	QUpdateRelease string = `update releases set
-chapter = ?, version = ?, status = ?, released_on = ?
-where id = ?;`
-
-	QDeleteRelease string = `delete from releases where id = ?;`
-
-	QListReleasesDesc string = `select
-id, chapter, version, status, released_on
-from releases
-where project_id = ?
-order by released_on desc;`
-
-	QListReleasesAsc string = `select
-id, chapter, version, status, released_on
-from releases
-where project_id = ?
-order by released_on asc;`
-
-	QFindRelease string = `select
-chapter, version, status, released_on, project_id
-from releases
-where id = ?;`
-
-	QLookupRelease string = `select
-R.id, R.status, R.released_on, R.project_id
-from releases R
-where R.chapter = ?
-	and R.version = ?
-	and exists (
-		select P.id
-		from projects P
-		where P.project_name = ?
-			and P.id = R.project_id
-	);`
+	Rmax_len_identifier = 10
 )
-
-// Release contains information about a release, which there are many of under a given Project.  It contains information
-// about which chapter of manga the release was created for, which version of the release of said chapter it is for, and
-// the status of the release of the chapter itself, which may not be final right away.
-type Release struct {
-	Id         int           `json:"id"`
-	Chapter    string        `json:"chapter"`
-	Version    int           `json:"version"`
-	Status     ReleaseStatus `json:"status"`
-	ReleasedOn time.Time     `json:"releasedOn"`
-	ProjectID  int           `json:"projectId"`
-}
 
 // NewRelease constructs a brand new Release instance, with a default state lacking information its (future) position in
 // a database.
-func NewRelease(projectId, version int, chapterName string) Release {
+func NewRelease(projectId, version uint32, chapterName string) Release {
 	return Release{
 		0,
 		chapterName,
+		"ims", // @TODO make this variable
 		version,
-		RStatusDraft,
+		RStatusDraftStr,
 		time.Now(),
 		projectId,
 	}
 }
 
 // FindRelease attempts to lookup a release by ID.
-func FindRelease(id int, db *sql.DB) (Release, error) {
+func FindRelease(db *sql.DB, projectId uint32, releaseId uint32) (Release, error) {
 	r := Release{}
-	status := ""
-	row := db.QueryRow(QFindRelease, id)
-	if row == nil {
-		return Release{}, ErrNoSuchRelease
-	}
-	err := row.Scan(&r.Chapter, &r.Version, &status, &r.ReleasedOn, &r.ProjectID)
-	if err != nil {
-		return Release{}, err
-	}
-	r.Id = id
-	r.Status = ReleaseStatus(status)
-	return r, nil
-}
+	var s ReleaseStatus
 
-// LookupRelease attempts to find a specific release under a given project.
-func LookupRelease(chapter string, version int, projectName string, db *sql.DB) (Release, error) {
-	r := Release{}
-	var status string
-	row := db.QueryRow(QLookupRelease, chapter, version, projectName)
+	const query = "SELECT " + Rc_identifier + ", " + Rc_version + ", " +
+		Rc_status + ", " + Rc_released_on + ", " + Rc_project_id +
+		" FROM " + t_releases + " WHERE " + Rc_id + " = ? AND " + Rc_project_id + " = ?"
+
+	row := db.QueryRow(query, releaseId, projectId)
 	if row == nil {
 		return Release{}, ErrNoSuchRelease
 	}
-	err := row.Scan(&r.Id, &status, &r.ReleasedOn, &r.ProjectID)
+	err := row.Scan(&r.Identifier, &r.Version, &s, &r.ReleasedOn, &r.ProjectID)
 	if err != nil {
 		return Release{}, err
 	}
-	r.Chapter = chapter
-	r.Version = version
+	r.Id = releaseId
+	r.Status = s.String()
+	r.Scanlator = "ims" // @TODO make this variable
 	return r, nil
 }
 
 // ListReleases attempts to obtain a list of all of the releases in the database.
-func ListReleases(projectId int, ordering string, db *sql.DB) ([]Release, error) {
+func ListReleases(db *sql.DB, projectId uint32) ([]Release, error) {
 	releases := []Release{}
-	query := QListReleasesDesc
-	if ordering == "oldest" {
-		query = QListReleasesAsc
-	}
+
+	const query = "SELECT " + Rc_id + ", " + Rc_identifier + ", " +
+		Rc_version + ", " + Rc_status + ", " + Rc_released_on +
+		" FROM " + t_releases + " WHERE " + Rc_project_id + " = ?"
 	rows, err := db.Query(query, projectId)
 	if err != nil {
 		return []Release{}, err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var id, version int
-		var chapter, status string
+		var id, version uint32
+		var chapter string
+		var status ReleaseStatus
 		var released time.Time
 		scanErr := rows.Scan(&id, &chapter, &version, &status, &released)
 		if scanErr != nil {
@@ -166,8 +134,9 @@ func ListReleases(projectId int, ordering string, db *sql.DB) ([]Release, error)
 		releases = append(releases, Release{
 			id,
 			chapter,
+			"ims", // @TODO make this variable
 			version,
-			ReleaseStatus(status),
+			status.String(),
 			released,
 			projectId,
 		})
@@ -177,10 +146,11 @@ func ListReleases(projectId int, ordering string, db *sql.DB) ([]Release, error)
 
 // Validate checks that the "status" of the project is one of the accepted ReleaseStatus values.
 func (r *Release) Validate() error {
-	for _, status := range RStatuses {
-		if r.Status == status {
-			return nil
-		}
+	if NewReleaseStatus(r.Status) != RStatusUnknown {
+		return nil
+	}
+	if len(r.Identifier) > Rmax_len_identifier {
+		return ErrFieldTooLong
 	}
 	return ErrInvalidReleaseStatus
 }
@@ -191,74 +161,45 @@ func (r *Release) Save(db *sql.DB) error {
 	if validErr != nil {
 		return validErr
 	}
-	_, err := db.Exec(QSaveRelease, r.Chapter, r.Version, string(r.Status), r.ReleasedOn, r.ProjectID)
+
+	const query = "INSERT INTO " + t_releases + " (" +
+		Rc_identifier + ", " + Rc_version + ", " + Rc_status + ", " +
+		Rc_released_on + ", " + Rc_project_id + ") VALUES (?, ?, ?, ?, ?)"
+	_, err := db.Exec(query, r.Identifier, r.Version, NewReleaseStatus(r.Status), r.ReleasedOn, r.ProjectID)
 	if err != nil {
 		return err
 	}
-	row := db.QueryRow(QLastInsertID)
-	if row == nil {
-		return ErrCouldNotGetID
+	id, err := GetLastInsertId(db)
+	if err != nil {
+		return err
 	}
-	return row.Scan(&r.Id)
+	r.Id = uint32(id)
+	return nil
 }
 
 // Update modifies all of the fields of a Release in place with whatever is currently in the struct.
 func (r *Release) Update(db *sql.DB) error {
+
 	validErr := r.Validate()
 	if validErr != nil {
 		return validErr
 	}
 	now := time.Now()
-	_, err := db.Exec(QUpdateRelease, r.Chapter, r.Version, string(r.Status), now, r.Id)
+	const query = "UPDATE " + t_releases + " SET " +
+		Rc_identifier + " = ?, " + Rc_version + " = ?," + Rc_status + " = ?," +
+		Rc_released_on + " = ? WHERE " + Rc_id + " = ? LIMIT 1"
+	_, err := db.Exec(query, r.Identifier, r.Version, NewReleaseStatus(r.Status), now, r.Id)
 	r.ReleasedOn = now
 	return err
 }
 
 // Delete removes the Release and all associated pages from the database.
-func (r *Release) Delete(db *sql.DB, sp storage_provider.Binary) error {
-	pages, listErr := ListPages(r.Id, db)
-	var deleteErr error
-	for _, page := range pages {
-		dErr := page.Delete(db, sp)
-		if dErr != nil {
-			deleteErr = dErr
-		}
-	}
-	_, err := db.Exec(QDeleteRelease, r.Id)
-	if err != nil {
-		return err
-	}
-	if listErr != nil {
-		return listErr
-	}
-	return deleteErr
+func (r *Release) Delete(db *sql.DB) error {
+	const query = "DELETE FROM " + t_releases + " WHERE " + Rc_id + " = ? LIMIT 1"
+	_, err := db.Exec(query, r.Id)
+	return err
 }
 
-// CreateArchive builds a zip file containing all of the image files of pages that are part of the release.
-func (r *Release) CreateArchive(db *sql.DB, sp storage_provider.Binary) ([]byte, error) {
-	pages, listErr := ListPages(r.Id, db)
-	if listErr != nil {
-		return []byte{}, listErr
-	}
-	buffer := new(bytes.Buffer)
-	w := zip.NewWriter(buffer)
-	for _, page := range pages {
-		imgData, err := sp.Get(page.Location)
-		if err != nil {
-			return []byte{}, err
-		}
-		parts := strings.Split(page.Location, ".")
-		ext := parts[len(parts)-1]
-		f2, openErr := w.Create(page.Number + "." + ext)
-		if openErr != nil {
-			return []byte{}, openErr
-		}
-		_, writeErr := f2.Write(imgData)
-		if writeErr != nil {
-			return []byte{}, writeErr
-		}
-	}
-	finalizeErr := w.Close()
-	archive := buffer.Bytes()
-	return archive, finalizeErr
+func GenerateArchiveName(p Project, r Release) string {
+	return fmt.Sprintf("%s - %s[%d][%s].zip", p.Shorthand, r.Identifier, r.Version, r.Scanlator)
 }

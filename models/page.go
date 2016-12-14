@@ -3,147 +3,173 @@ package models
 import (
 	"database/sql"
 	"errors"
+	"fmt"
+	"strings"
 	"time"
-  "../storage_provider"
 )
+
+// Page contains information about a single page of manga. Most important is its page name, which is the
+// path to the page's image file on disk.
+type Page struct {
+	Id        uint32    `json:"id"`
+	Name      string    `json:"name"`
+	CreatedAt time.Time `json:"createdAt"`
+	ReleaseID uint32    `json:"-"`
+	MimeType  string    `json:"mimeType"`
+}
+
+type MimeType uint32
+
+const (
+	MimeTypeUnknown    MimeType = 0
+	MimeTypeUnknownStr string   = "application/octet-stream"
+	MimeTypePng        MimeType = 1
+	MimeTypePngStr     string   = "image/png"
+	MimeTypeJpg        MimeType = 2
+	MimeTypeJpgStr     string   = "image/jpeg"
+)
+
+func (t MimeType) String() string {
+	switch t {
+	case MimeTypePng:
+		return MimeTypePngStr
+	case MimeTypeJpg:
+		return MimeTypeJpgStr
+	default:
+		return MimeTypeUnknownStr
+	}
+}
+
+func NewMimeType(val string) MimeType {
+	switch val {
+	case MimeTypePngStr:
+		return MimeTypePng
+	case MimeTypeJpgStr:
+		return MimeTypeJpg
+	default:
+		return MimeTypeUnknown
+	}
+}
+
+func MimeTypeFromFilename(filename string) MimeType {
+	if strings.HasSuffix(filename, ".png") {
+		return MimeTypePng
+	} else if strings.HasSuffix(filename, ".jpg") {
+		return MimeTypeJpg
+	}
+	return MimeTypeUnknown
+}
 
 // Errors pertaining to the data in a Page or operations on Pages.
 var (
-	ErrNoSuchPage      = errors.New("Could not find page.")
-	ErrPageNumberEmpty = errors.New("Page number is empty.")
+	ErrNoSuchPage              = errors.New("Could not find page.")
+	ErrPageNameEmpty           = errors.New("Page name is empty.")
+	ErrPageNameTooLong         = errors.New("Page name is too long.")
+	ErrPageUnsupportedMimeType = errors.New("Unsupported mime type.")
 )
 
 // Database queries for operations on Pages.
 const (
-	QInitTablePage string = `create table if not exists pages (
-		id int not null auto_increment,
-		number varchar(255),
-		location varchar(255),
-		created_at timestamp,
-		release_id int,
-		foreign key(release_id) references releases(id),
-		primary key(id)
-);`
+	t_pages        string = "`pages`"
+	PGc_id         string = "`id`"
+	PGc_name       string = "`name`"
+	PGc_created_at string = "`created_at`"
+	PGc_release_id string = "`release_id`"
+	PGc_mime_type  string = "`mime_type`"
 
-	QSavePage string = `insert into pages (
-		number, location, created_at, release_id
-) values (
-		?, ?, ?, ?
-);`
-
-	QUpdatePage string = `update pages set
-number = ?, location = ?, created_at = ?
-where id = ?;`
-
-	QDeletePage string = `delete from pages where id = ?;`
-
-	QListPages string = `select
-id, number, location, created_at
-from pages
-where release_id = ?
-order by number asc;`
-
-	QFindPage string = `select
-number, location, created_at
-from pages
-where id = ?;`
-
-	QLookupPage string = `select
-P.id, P.location, P.created_at, P.release_id
-from pages P
-where number = ?
-	and exists (
-		select R.id
-		from releases R
-		where R.id = P.release_id
-			and R.chapter = ?
-			and R.version = ?
-			and exists (
-				select P2.id
-				from projects P2
-				where P2.id = R.project_id
-					and P2.project_name = ?
-			)
-	);`
+	PGmax_len_name = 255
 )
-
-// Page contains information about a single page of manga. Most important is its page number and location, which is the
-// path to the page's image file on disk.
-type Page struct {
-	Id        int       `json:"id"`
-	Number    string    `json:"page"`
-	Location  string    `json:"-"` // Omit from JSON encodings
-	CreatedAt time.Time `json:"createdAt"`
-	ReleaseID int       `json:"releaseId"`
-}
 
 // NewPage constructs a brand new Project instance, with a default state lacking information about its (future)
 // position in a database.
-func NewPage(pageNum, filePath string, releaseId int) Page {
+func NewPage(name string, releaseId uint32, mimeType MimeType) Page {
 	return Page{
 		0,
-		pageNum,
-		filePath,
+		name,
 		time.Now(),
 		releaseId,
+		mimeType.String(),
 	}
 }
 
 // FindPage attempts to lookup a page by ID.
-func FindPage(id int, db *sql.DB) (Page, error) {
+func FindPage(db *sql.DB, releaseId uint32, pageId uint32) (Page, error) {
 	p := Page{}
-	row := db.QueryRow(QFindPage, id)
+	const query = "SELECT " + PGc_name + ", " + PGc_created_at + ", " + PGc_mime_type +
+		" FROM " + t_pages + " WHERE " + PGc_id + " = ? AND " + PGc_release_id + " = ?"
+	row := db.QueryRow(query, pageId, releaseId)
 	if row == nil {
 		return Page{}, ErrNoSuchPage
 	}
-	err := row.Scan(&p.Number, &p.Location, &p.CreatedAt)
+	var t MimeType
+	err := row.Scan(&p.Name, &p.CreatedAt, &t)
 	if err != nil {
 		return Page{}, err
 	}
-	p.Id = id
+	p.MimeType = t.String()
+	p.Id = pageId
 	return p, nil
 }
 
-// LookupPage attempts to find a specific page assigned to a release in a project.
-func LookupPage(pageNumber, releaseChapter string, releaseVersion int, projectName string, db *sql.DB) (Page, error) {
+func FindPageByName(db *sql.DB, releaseId uint32, name string) (Page, error) {
 	p := Page{}
-	row := db.QueryRow(QLookupPage, pageNumber, releaseChapter, releaseVersion, projectName)
+	const query = "SELECT " + PGc_id + ", " + PGc_name + ", " + PGc_created_at + ", " + PGc_mime_type +
+		" FROM " + t_pages + " WHERE " + PGc_release_id + " = ? AND " + PGc_name + " = ?"
+	row := db.QueryRow(query, releaseId, name)
 	if row == nil {
 		return Page{}, ErrNoSuchPage
 	}
-	err := row.Scan(&p.Id, &p.Location, &p.CreatedAt, &p.ReleaseID)
+	var t MimeType
+	err := row.Scan(&p.Id, &p.Name, &p.CreatedAt, &t)
 	if err != nil {
 		return Page{}, err
 	}
-	p.Number = pageNumber
+	p.MimeType = t.String()
 	return p, nil
+}
+
+func GeneratePagePath(p Project, r Release, name string) string {
+	return fmt.Sprintf("%d/%d/%s", p.Id, r.Id, name)
 }
 
 // ListPages attempts to obtain a list of all pages
-func ListPages(releaseId int, db *sql.DB) ([]Page, error) {
+func ListPages(db *sql.DB, releaseId uint32) ([]Page, error) {
 	pages := []Page{}
-	rows, err := db.Query(QListPages, releaseId)
+
+	const query = "SELECT " + PGc_id + ", " + PGc_name + ", " + PGc_created_at + ", " + PGc_mime_type +
+		" FROM " + t_pages + " WHERE " + PGc_release_id + " = ?" +
+		" ORDER BY " + PGc_name + " ASC"
+
+	rows, err := db.Query(query, releaseId)
 	if err != nil {
 		return []Page{}, err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var id int
-		var number, location string
+		var id uint32
+		var name string
 		var created time.Time
-		scanErr := rows.Scan(&id, &number, &location, &created)
+		var t MimeType
+		scanErr := rows.Scan(&id, &name, &created, &t)
 		if scanErr != nil {
 			err = scanErr
 		}
-		pages = append(pages, Page{id, number, location, created, releaseId})
+		pages = append(pages, Page{id, name, created, releaseId, t.String()})
 	}
 	return pages, err
 }
 
 // Validate currently doesn't perform any integrity checks.
 func (p *Page) Validate() error {
-	if len(p.Number) == 0 {
-		return ErrPageNumberEmpty
+	if len(p.Name) == 0 {
+		return ErrPageNameEmpty
+	}
+	if len(p.Name) > PGmax_len_name {
+		return ErrPageNameTooLong
+	}
+
+	if MimeTypeUnknownStr == p.MimeType {
+		return ErrPageUnsupportedMimeType
 	}
 	return nil
 }
@@ -155,29 +181,30 @@ func (p *Page) Save(db *sql.DB) error {
 		return validErr
 	}
 	// TODO - Make sure to save image data to disk before saving the Page.
-	_, err := db.Exec(QSavePage, p.Number, p.Location, p.CreatedAt, p.ReleaseID)
+
+	const query = "INSERT INTO " + t_pages + " (" +
+		PGc_name + ", " + PGc_created_at + ", " + PGc_release_id + ", " + PGc_mime_type + ") VALUES (?, ?, ?, ?)"
+
+	_, err := db.Exec(query, p.Name, p.CreatedAt, p.ReleaseID, NewMimeType(p.MimeType))
 	if err != nil {
 		return err
 	}
-	row := db.QueryRow(QLastInsertID)
-	if row == nil {
-		return ErrCouldNotGetID
+	id, err := GetLastInsertId(db)
+	if err != nil {
+		return err
 	}
-	return row.Scan(&p.Id)
+	p.Id = uint32(id)
+	return nil
 }
 
 // Update modifies all of the fields of a Page in place with whatever is currently in the struct.
 func (p *Page) Update(db *sql.DB) error {
-	_, err := db.Exec(QUpdatePage, p.Number, p.Location, p.CreatedAt, p.Id)
-	return err
+	return ErrOperationNotSupported
 }
 
 // Delete removes the Page from the database and deletes the page image from disk.
-func (p *Page) Delete(db *sql.DB, sp storage_provider.Binary) error {
-	_, err := db.Exec(QDeletePage, p.Id)
-	rmErr := sp.Unset(p.Location)
-	if err != nil {
-		return err
-	}
-	return rmErr
+func (p *Page) Delete(db *sql.DB) error {
+	const query = "DELETE FROM " + t_pages + " WHERE " + PGc_id + " = ? LIMIT 1"
+	_, err := db.Exec(query, p.Id)
+	return err
 }

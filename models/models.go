@@ -5,14 +5,11 @@ import (
 	"errors"
 )
 
-// SQL queries that can be used by all models.
-const (
-	QLastInsertID string = `select LAST_INSERT_ID();`
-)
-
 // Errors relevant to all models
 var (
-	ErrCouldNotGetID error = errors.New("Could not get ID of last created row.")
+	ErrCouldNotGetID         error = errors.New("Could not get ID of last created row.")
+	ErrOperationNotSupported error = errors.New("Operation not supported.")
+	ErrFieldTooLong                = errors.New("A field value is too long.")
 )
 
 // Model should be implemented by all model types to provide functionality for data validation and persistence.
@@ -25,14 +22,17 @@ type Model interface {
 
 // InitDB initializes all of the database tables, only creating them if they do not already exist.
 func InitDB(db *sql.DB) error {
-	_, err := db.Exec(QInitTableProjects)
-	if err != nil {
-		return err
+	return nil
+}
+
+func GetLastInsertId(db *sql.DB) (uint64, error) {
+	// SQL queries that can be used by all models.
+	const query = "SELECT LAST_INSERT_ID();"
+	row := db.QueryRow(query)
+	if row == nil {
+		return 0, ErrCouldNotGetID
 	}
-	_, err = db.Exec(QInitTableReleases)
-	if err != nil {
-		return err
-	}
-	_, err = db.Exec(QInitTablePage)
-	return err
+	var id uint64
+	err := row.Scan(&id)
+	return id, err
 }
