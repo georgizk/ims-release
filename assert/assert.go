@@ -18,8 +18,8 @@ func NotEqual(t TestingT, unexpected, actual interface{}) bool {
 
 func Equal(t TestingT, expected, actual interface{}) bool {
 	if expected != actual {
-	    _, file, no, _ := runtime.Caller(1)
-        t.Errorf("%s#%d: expected %s doesn't match %s", file, no, expected, actual)
+		_, file, no, _ := runtime.Caller(1)
+		t.Errorf("%s#%d: expected %s doesn't match %s", file, no, expected, actual)
 		return false
 	}
 	return true
