@@ -5,18 +5,17 @@ import (
 	"os"
 )
 
-// TODO - Add a runtime flag to specify the config location.
-
-// ConfigFilePath is the default path to look for a configuration for the service in.
-const ConfigFilePath string = "./config/config.json"
-
 // Config contains information that the API service generally needs to run.
 // It includes the address (formatted like <ip>:<port>) to bind the HTTP server to,
 // as well as the path to the directory to which image files are to be written.
 type Config struct {
-	BindAddress    string `json:"address"`
+	BindAddress    string `json:"bindAddress"`
 	ImageDirectory string `json:"imageDirectory"`
-	Database       string `json:"database"`
+	DbProtocol     string `json:"dbProtocol"`
+	DbAddress      string `json:"dbAddress"`
+	DbName         string `json:"dbName"`
+	DbUser         string `json:"dbUser"`
+	DbPassword     string `json:"dbPassword"`
 }
 
 // MustLoad attempts to load a Config from a specified path and panics if it
@@ -33,5 +32,6 @@ func MustLoad(path string) Config {
 	if decodeErr != nil {
 		panic(decodeErr)
 	}
+
 	return config
 }

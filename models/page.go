@@ -1,9 +1,9 @@
 package models
 
 import (
-	"database/sql"
 	"errors"
 	"fmt"
+	"ims-release/database"
 	"strings"
 	"time"
 )
@@ -93,7 +93,7 @@ func NewPage(name string, releaseId uint32, mimeType MimeType) Page {
 }
 
 // FindPage attempts to lookup a page by ID.
-func FindPage(db *sql.DB, releaseId uint32, pageId uint32) (Page, error) {
+func FindPage(db database.DB, releaseId uint32, pageId uint32) (Page, error) {
 	p := Page{}
 	const query = "SELECT " + PGc_name + ", " + PGc_created_at + ", " + PGc_mime_type +
 		" FROM " + t_pages + " WHERE " + PGc_id + " = ? AND " + PGc_release_id + " = ?"
@@ -111,7 +111,7 @@ func FindPage(db *sql.DB, releaseId uint32, pageId uint32) (Page, error) {
 	return p, nil
 }
 
-func FindPageByName(db *sql.DB, releaseId uint32, name string) (Page, error) {
+func FindPageByName(db database.DB, releaseId uint32, name string) (Page, error) {
 	p := Page{}
 	const query = "SELECT " + PGc_id + ", " + PGc_name + ", " + PGc_created_at + ", " + PGc_mime_type +
 		" FROM " + t_pages + " WHERE " + PGc_release_id + " = ? AND " + PGc_name + " = ?"
@@ -133,7 +133,7 @@ func GeneratePagePath(p Project, r Release, name string) string {
 }
 
 // ListPages attempts to obtain a list of all pages
-func ListPages(db *sql.DB, releaseId uint32) ([]Page, error) {
+func ListPages(db database.DB, releaseId uint32) ([]Page, error) {
 	pages := []Page{}
 
 	const query = "SELECT " + PGc_id + ", " + PGc_name + ", " + PGc_created_at + ", " + PGc_mime_type +
@@ -175,7 +175,7 @@ func (p *Page) Validate() error {
 }
 
 // Save inserts the page into the database and updates its Id field.
-func (p *Page) Save(db *sql.DB) error {
+func (p *Page) Save(db database.DB) error {
 	validErr := p.Validate()
 	if validErr != nil {
 		return validErr
@@ -198,12 +198,12 @@ func (p *Page) Save(db *sql.DB) error {
 }
 
 // Update modifies all of the fields of a Page in place with whatever is currently in the struct.
-func (p *Page) Update(db *sql.DB) error {
+func (p *Page) Update(db database.DB) error {
 	return ErrOperationNotSupported
 }
 
 // Delete removes the Page from the database and deletes the page image from disk.
-func (p *Page) Delete(db *sql.DB) error {
+func (p *Page) Delete(db database.DB) error {
 	const query = "DELETE FROM " + t_pages + " WHERE " + PGc_id + " = ? LIMIT 1"
 	_, err := db.Exec(query, p.Id)
 	return err

@@ -1,8 +1,8 @@
 package models
 
 import (
-	"database/sql"
 	"errors"
+	"ims-release/database"
 	"time"
 )
 
@@ -99,7 +99,7 @@ func NewProject(name, shorthand, description string) Project {
 }
 
 // FindProject attempts to lookup a project by ID.
-func FindProject(db *sql.DB, id uint32) (Project, error) {
+func FindProject(db database.DB, id uint32) (Project, error) {
 	p := Project{}
 	var s ProjectStatus
 	const query = "SELECT " + Pc_name + ", " + Pc_shorthand + ", " +
@@ -108,7 +108,7 @@ func FindProject(db *sql.DB, id uint32) (Project, error) {
 
 	row := db.QueryRow(query, id)
 	err := row.Scan(&p.Name, &p.Shorthand, &p.Description, &s, &p.CreatedAt)
-	if err == sql.ErrNoRows {
+	if err == database.ErrNoRows {
 		return Project{}, ErrNoSuchProject
 	} else if err != nil {
 		return Project{}, err
@@ -119,7 +119,7 @@ func FindProject(db *sql.DB, id uint32) (Project, error) {
 }
 
 // ListProjects attempts to obtain a list of all of the projects in the database.
-func ListProjects(db *sql.DB) ([]Project, error) {
+func ListProjects(db database.DB) ([]Project, error) {
 	projects := []Project{}
 
 	const query = "SELECT " + Pc_id + ", " + Pc_name + ", " +
@@ -155,7 +155,7 @@ func (p *Project) Validate() error {
 }
 
 // Save inserts the project into the database and updates its Id field.
-func (p *Project) Save(db *sql.DB) error {
+func (p *Project) Save(db database.DB) error {
 	validErr := p.Validate()
 	if validErr != nil {
 		return validErr
@@ -178,7 +178,7 @@ func (p *Project) Save(db *sql.DB) error {
 }
 
 // Update modifies all of the fields of a Project in place with whatever is currently in the struct.
-func (p *Project) Update(db *sql.DB) error {
+func (p *Project) Update(db database.DB) error {
 	validErr := p.Validate()
 	if validErr != nil {
 		return validErr
@@ -193,7 +193,7 @@ func (p *Project) Update(db *sql.DB) error {
 }
 
 // Delete removes the Project and all associated releases from the database.
-func (p *Project) Delete(db *sql.DB) error {
+func (p *Project) Delete(db database.DB) error {
 	const query = "DELETE FROM " + t_projects + " WHERE " +
 		Pc_id + " = ? LIMIT 1"
 	_, err := db.Exec(query, p.Id)

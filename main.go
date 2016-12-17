@@ -1,40 +1,40 @@
 package main
 
 import (
-	"./config"
-	"./endpoints"
-	"./storage_provider"
+	"ims-release/config"
+	"ims-release/endpoints"
+	"ims-release/storage_provider"
+	"ims-release/database"
 
-	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 
-	"github.com/DavidHuie/gomigrate"
-	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
 
 func main() {
+	const usage = "Usage: ims-release <configPath>\n"
+	const missingConf = "You must specify the path to the json configuration file.\n"
 	log.SetFlags(log.LstdFlags | log.Llongfile)
 	cfgPath := ""
 	if len(os.Args) > 1 {
 		cfgPath = os.Args[1]
 	} else {
-		fmt.Fprintf(os.Stderr, "Usage: ims-release <configPath>\n")
-		fmt.Fprintf(os.Stderr, "You must specify the path to the json configuration file.\n")
+		fmt.Fprintf(os.Stderr, usage)
+		fmt.Fprintf(os.Stderr, missingConf)
 		os.Exit(1)
 	}
 	cfg := config.MustLoad(cfgPath)
 
-	db, err := sql.Open("mysql", cfg.Database)
+	db, err := database.NewDbHandle(&cfg)
 	if err != nil {
 		panic(err)
 	}
-
-	Migrate(db)
+	migrationsPath := os.Getenv("GOPATH") + "/src/ims-release/migrations"
+	db.Migrate(migrationsPath)
 	sp := storage_provider.File{Root: cfg.ImageDirectory}
 
 	router := mux.NewRouter()
@@ -51,10 +51,4 @@ func main() {
 		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE"}))(loggedRouter)
 
 	http.ListenAndServe(address, corsRouter)
-}
-
-func Migrate(db *sql.DB) error {
-	migrator, _ := gomigrate.NewMigrator(db, gomigrate.Mysql{}, "./migrations")
-	err := migrator.Migrate()
-	return err
 }

@@ -1,9 +1,9 @@
 package models
 
 import (
-	"../assert"
 	"errors"
 	"gopkg.in/DATA-DOG/go-sqlmock.v1"
+	"ims-release/assert"
 	"strings"
 	"testing"
 	"time"

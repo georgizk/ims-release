@@ -1,5 +1,9 @@
 {
-  "address": "0.0.0.0:3000",
+  "bindAddress": "0.0.0.0:3000",
   "imageDirectory": "./images",
-  "database": "tester:password1@/testing?parseTime=true"
+  "dbProtocol": "tcp",
+  "dbAddress": "127.0.0.1:3306",
+  "dbName": "ims-release",
+  "dbUser": "ims",
+  "dbPassword": "password1"
 }

@@ -1,9 +1,9 @@
 package models
 
 import (
-	"database/sql"
 	"errors"
 	"fmt"
+	"ims-release/database"
 	"time"
 )
 
@@ -88,7 +88,7 @@ func NewRelease(projectId, version uint32, chapterName string) Release {
 }
 
 // FindRelease attempts to lookup a release by ID.
-func FindRelease(db *sql.DB, projectId uint32, releaseId uint32) (Release, error) {
+func FindRelease(db database.DB, projectId uint32, releaseId uint32) (Release, error) {
 	r := Release{}
 	var s ReleaseStatus
 
@@ -111,7 +111,7 @@ func FindRelease(db *sql.DB, projectId uint32, releaseId uint32) (Release, error
 }
 
 // ListReleases attempts to obtain a list of all of the releases in the database.
-func ListReleases(db *sql.DB, projectId uint32) ([]Release, error) {
+func ListReleases(db database.DB, projectId uint32) ([]Release, error) {
 	releases := []Release{}
 
 	const query = "SELECT " + Rc_id + ", " + Rc_identifier + ", " +
@@ -156,7 +156,7 @@ func (r *Release) Validate() error {
 }
 
 // Save inserts the release into the database and updates its Id field.
-func (r *Release) Save(db *sql.DB) error {
+func (r *Release) Save(db database.DB) error {
 	validErr := r.Validate()
 	if validErr != nil {
 		return validErr
@@ -178,7 +178,7 @@ func (r *Release) Save(db *sql.DB) error {
 }
 
 // Update modifies all of the fields of a Release in place with whatever is currently in the struct.
-func (r *Release) Update(db *sql.DB) error {
+func (r *Release) Update(db database.DB) error {
 
 	validErr := r.Validate()
 	if validErr != nil {
@@ -194,7 +194,7 @@ func (r *Release) Update(db *sql.DB) error {
 }
 
 // Delete removes the Release and all associated pages from the database.
-func (r *Release) Delete(db *sql.DB) error {
+func (r *Release) Delete(db database.DB) error {
 	const query = "DELETE FROM " + t_releases + " WHERE " + Rc_id + " = ? LIMIT 1"
 	_, err := db.Exec(query, r.Id)
 	return err
