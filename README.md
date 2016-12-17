@@ -24,7 +24,7 @@ $GOBIN/ims-release config.json
 
 ### Golang
 
-1. Install Go
+1. Install Go version 1.6.3 or later
 2. Set the GOPATH environment variable
 3. Set the GOBIN environment variable to $GOPATH/bin
 4. Place ims-release inside $GOPATH/src
@@ -38,8 +38,8 @@ mkdir -p $GOPATH/src
 cd $GOPATH/src
 git clone https://github.com/georgizk/ims-release.git
 cd ims-release
-go get ./...
-go build
+go get
+go install
 ```
 
 ### MySQL
