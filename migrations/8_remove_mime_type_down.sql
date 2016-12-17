@@ -1,0 +1,1 @@
+ALTER TABLE `pages` ADD COLUMN `mime_type` INT UNSIGNED NOT NULL;

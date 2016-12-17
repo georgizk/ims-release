@@ -20,18 +20,14 @@ type Config struct {
 
 // MustLoad attempts to load a Config from a specified path and panics if it
 // cannot successfully read or decode the contents of the file at that path.
-func MustLoad(path string) Config {
+func LoadConfig(path string) (*Config, error) {
 	file, openErr := os.Open(path)
 	if openErr != nil {
-		panic(openErr)
+		return nil, openErr
 	}
 	defer file.Close()
 	decoder := json.NewDecoder(file)
 	config := Config{}
 	decodeErr := decoder.Decode(&config)
-	if decodeErr != nil {
-		panic(decodeErr)
-	}
-
-	return config
+	return &config, decodeErr
 }
