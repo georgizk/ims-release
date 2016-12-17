@@ -15,6 +15,7 @@ import (
 	"image/png"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -165,7 +166,8 @@ func createPage(db database.DB, cfg *config.Config, sp storage_provider.Binary) 
 		}
 		log.Println("[+++] Successfully decoded image data")
 
-		mimeType := models.MimeTypeFromFilename(request.Name)
+		page := models.NewPage(release, request.Name, time.Now())
+		mimeType := page.MimeType
 		var imgParseErr error
 		switch mimeType {
 		case models.MimeTypePng:
@@ -189,7 +191,7 @@ func createPage(db database.DB, cfg *config.Config, sp storage_provider.Binary) 
 			return
 		}
 
-		filePath := models.GeneratePagePath(project, release, request.Name)
+		filePath := models.GeneratePagePath(project, release, page.Name)
 
 		log.Printf("[+++] Computed filename %s\n", filePath)
 		saveErr := sp.Set(filePath, imageData)
@@ -201,7 +203,7 @@ func createPage(db database.DB, cfg *config.Config, sp storage_provider.Binary) 
 			return
 		}
 		log.Println("[+++] Successfully saved image to disk")
-		page := models.NewPage(request.Name, request.ReleaseID, mimeType)
+
 		saveErr = page.Save(db)
 		if saveErr != nil {
 			log.Println("[---] Insert error:", saveErr)
@@ -260,7 +262,7 @@ func getPage(db database.DB, cfg *config.Config, sp storage_provider.Binary) htt
 			return
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Header().Set("Content-Type", page.MimeType)
+		w.Header().Set("Content-Type", page.MimeType.String())
 		w.Write(imageBytes)
 	}
 }
