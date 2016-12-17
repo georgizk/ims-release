@@ -3,7 +3,6 @@ package main
 import (
 	"./config"
 	"./endpoints"
-	"./models"
 	"./storage_provider"
 
 	"database/sql"
@@ -36,12 +35,6 @@ func main() {
 	}
 
 	Migrate(db)
-
-	initErr := models.InitDB(db)
-	if initErr != nil {
-		panic(initErr)
-	}
-
 	sp := storage_provider.File{Root: cfg.ImageDirectory}
 
 	router := mux.NewRouter()
