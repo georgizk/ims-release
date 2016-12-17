@@ -168,7 +168,7 @@ func (p *Page) Validate() error {
 		return ErrPageNameTooLong
 	}
 
-	if MimeTypeUnknownStr == p.MimeType {
+	if MimeTypeUnknown == NewMimeType(p.MimeType) {
 		return ErrPageUnsupportedMimeType
 	}
 	return nil
@@ -185,11 +185,11 @@ func (p *Page) Save(db *sql.DB) error {
 	const query = "INSERT INTO " + t_pages + " (" +
 		PGc_name + ", " + PGc_created_at + ", " + PGc_release_id + ", " + PGc_mime_type + ") VALUES (?, ?, ?, ?)"
 
-	_, err := db.Exec(query, p.Name, p.CreatedAt, p.ReleaseID, NewMimeType(p.MimeType))
+	res, err := db.Exec(query, p.Name, p.CreatedAt, p.ReleaseID, NewMimeType(p.MimeType))
 	if err != nil {
 		return err
 	}
-	id, err := GetLastInsertId(db)
+	id, err := res.LastInsertId()
 	if err != nil {
 		return err
 	}

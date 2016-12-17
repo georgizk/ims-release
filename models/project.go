@@ -107,34 +107,14 @@ func FindProject(db *sql.DB, id uint32) (Project, error) {
 		"FROM " + t_projects + " WHERE " + Pc_id + " = ?"
 
 	row := db.QueryRow(query, id)
-	if row == nil {
-		return Project{}, ErrNoSuchProject
-	}
 	err := row.Scan(&p.Name, &p.Shorthand, &p.Description, &s, &p.CreatedAt)
-	if err != nil {
+	if err == sql.ErrNoRows {
+		return Project{}, ErrNoSuchProject
+	} else if err != nil {
 		return Project{}, err
 	}
 	p.Status = s.String()
 	p.Id = id
-	return p, nil
-}
-
-func FindProjectByShorthand(db *sql.DB, shorthand string) (Project, error) {
-	p := Project{}
-	var s ProjectStatus
-	const query = "SELECT " + Pc_id + ", " + Pc_name + ", " + Pc_shorthand + ", " +
-		Pc_description + ", " + Pc_status + ", " + Pc_created_at +
-		" FROM " + t_projects + " WHERE " + Pc_shorthand + " = ?"
-	row := db.QueryRow(query, shorthand)
-	if row == nil {
-		return Project{}, ErrNoSuchProject
-	}
-
-	err := row.Scan(&p.Id, &p.Name, &p.Shorthand, &p.Description, &s, &p.CreatedAt)
-	if err != nil {
-		return Project{}, err
-	}
-	p.Status = s.String()
 	return p, nil
 }
 
@@ -163,15 +143,15 @@ func ListProjects(db *sql.DB) ([]Project, error) {
 
 // Validate checks that the "status" of the project is one of the accepted ProjectStatus values.
 func (p *Project) Validate() error {
-	status := NewProjectStatus(p.Status)
-	if status != PStatusUnknown {
-		return nil
+	if PStatusUnknown == NewProjectStatus(p.Status) {
+		return ErrInvalidProjectStatus
 	}
 
 	if len(p.Shorthand) > Pmax_len_shorthand || len(p.Name) > Pmax_len_name || len(p.Description) > Pmax_len_description {
 		return ErrFieldTooLong
 	}
-	return ErrInvalidProjectStatus
+
+	return nil
 }
 
 // Save inserts the project into the database and updates its Id field.
@@ -185,11 +165,11 @@ func (p *Project) Save(db *sql.DB) error {
 		Pc_name + ", " + Pc_shorthand + ", " + Pc_description + ", " +
 		Pc_status + ", " + Pc_created_at + ") VALUES (?, ?, ?, ?, ?)"
 
-	_, err := db.Exec(query, p.Name, p.Shorthand, p.Description, NewProjectStatus(p.Status), p.CreatedAt)
+	res, err := db.Exec(query, p.Name, p.Shorthand, p.Description, NewProjectStatus(p.Status), p.CreatedAt)
 	if err != nil {
 		return err
 	}
-	id, err := GetLastInsertId(db)
+	id, err := res.LastInsertId()
 	if err != nil {
 		return err
 	}

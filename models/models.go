@@ -19,20 +19,3 @@ type Model interface {
 	Update(*sql.DB) error
 	Delete(*sql.DB) error
 }
-
-// InitDB initializes all of the database tables, only creating them if they do not already exist.
-func InitDB(db *sql.DB) error {
-	return nil
-}
-
-func GetLastInsertId(db *sql.DB) (uint64, error) {
-	// SQL queries that can be used by all models.
-	const query = "SELECT LAST_INSERT_ID();"
-	row := db.QueryRow(query)
-	if row == nil {
-		return 0, ErrCouldNotGetID
-	}
-	var id uint64
-	err := row.Scan(&id)
-	return id, err
-}

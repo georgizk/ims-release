@@ -165,11 +165,11 @@ func (r *Release) Save(db *sql.DB) error {
 	const query = "INSERT INTO " + t_releases + " (" +
 		Rc_identifier + ", " + Rc_version + ", " + Rc_status + ", " +
 		Rc_released_on + ", " + Rc_project_id + ") VALUES (?, ?, ?, ?, ?)"
-	_, err := db.Exec(query, r.Identifier, r.Version, NewReleaseStatus(r.Status), r.ReleasedOn, r.ProjectID)
+	res, err := db.Exec(query, r.Identifier, r.Version, NewReleaseStatus(r.Status), r.ReleasedOn, r.ProjectID)
 	if err != nil {
 		return err
 	}
-	id, err := GetLastInsertId(db)
+	id, err := res.LastInsertId()
 	if err != nil {
 		return err
 	}
