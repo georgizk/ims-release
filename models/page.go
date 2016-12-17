@@ -15,7 +15,7 @@ type Page struct {
 	Name      string    `json:"name"`
 	CreatedAt time.Time `json:"createdAt"`
 	ReleaseID uint32    `json:"-"`
-	MimeType  string    `json:"mimeType"`
+	MimeType  MimeType  `json:"-"`
 }
 
 type MimeType uint32
@@ -75,56 +75,49 @@ const (
 	PGc_name       string = "`name`"
 	PGc_created_at string = "`created_at`"
 	PGc_release_id string = "`release_id`"
-	PGc_mime_type  string = "`mime_type`"
 
 	PGmax_len_name = 255
 )
 
 // NewPage constructs a brand new Project instance, with a default state lacking information about its (future)
 // position in a database.
-func NewPage(name string, releaseId uint32, mimeType MimeType) Page {
+func NewPage(release Release, name string, tm time.Time) Page {
 	return Page{
-		0,
-		name,
-		time.Now(),
-		releaseId,
-		mimeType.String(),
+		Id:        0,
+		Name:      name,
+		CreatedAt: tm,
+		ReleaseID: release.Id,
+		MimeType:  MimeTypeFromFilename(name),
 	}
 }
 
 // FindPage attempts to lookup a page by ID.
-func FindPage(db database.DB, releaseId uint32, pageId uint32) (Page, error) {
-	p := Page{}
-	const query = "SELECT " + PGc_name + ", " + PGc_created_at + ", " + PGc_mime_type +
+func FindPage(db database.DB, release Release, pageId uint32) (Page, error) {
+	p := Page{ReleaseID: release.Id, Id: pageId}
+	const query = "SELECT " + PGc_name + ", " + PGc_created_at +
 		" FROM " + t_pages + " WHERE " + PGc_id + " = ? AND " + PGc_release_id + " = ?"
-	row := db.QueryRow(query, pageId, releaseId)
-	if row == nil {
+	row := db.QueryRow(query, pageId, release.Id)
+	err := row.Scan(&p.Name, &p.CreatedAt)
+	if err == database.ErrNoRows {
 		return Page{}, ErrNoSuchPage
-	}
-	var t MimeType
-	err := row.Scan(&p.Name, &p.CreatedAt, &t)
-	if err != nil {
+	} else if err != nil {
 		return Page{}, err
 	}
-	p.MimeType = t.String()
-	p.Id = pageId
+	p.MimeType = MimeTypeFromFilename(p.Name)
 	return p, nil
 }
 
-func FindPageByName(db database.DB, releaseId uint32, name string) (Page, error) {
-	p := Page{}
-	const query = "SELECT " + PGc_id + ", " + PGc_name + ", " + PGc_created_at + ", " + PGc_mime_type +
+func FindPageByName(db database.DB, release Release, name string) (Page, error) {
+	p := Page{ReleaseID: release.Id, Name: name, MimeType: MimeTypeFromFilename(name)}
+	const query = "SELECT " + PGc_id + ", " + PGc_created_at +
 		" FROM " + t_pages + " WHERE " + PGc_release_id + " = ? AND " + PGc_name + " = ?"
-	row := db.QueryRow(query, releaseId, name)
-	if row == nil {
+	row := db.QueryRow(query, release.Id, name)
+	err := row.Scan(&p.Id, &p.CreatedAt)
+	if err == database.ErrNoRows {
 		return Page{}, ErrNoSuchPage
-	}
-	var t MimeType
-	err := row.Scan(&p.Id, &p.Name, &p.CreatedAt, &t)
-	if err != nil {
+	} else if err != nil {
 		return Page{}, err
 	}
-	p.MimeType = t.String()
 	return p, nil
 }
 
@@ -133,29 +126,28 @@ func GeneratePagePath(p Project, r Release, name string) string {
 }
 
 // ListPages attempts to obtain a list of all pages
-func ListPages(db database.DB, releaseId uint32) ([]Page, error) {
+func ListPages(db database.DB, release Release) ([]Page, error) {
 	pages := []Page{}
 
-	const query = "SELECT " + PGc_id + ", " + PGc_name + ", " + PGc_created_at + ", " + PGc_mime_type +
+	const query = "SELECT " + PGc_id + ", " + PGc_name + ", " + PGc_created_at +
 		" FROM " + t_pages + " WHERE " + PGc_release_id + " = ?" +
 		" ORDER BY " + PGc_name + " ASC"
 
-	rows, err := db.Query(query, releaseId)
+	rows, err := db.Query(query, release.Id)
 	if err != nil {
 		return []Page{}, err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var id uint32
-		var name string
-		var created time.Time
-		var t MimeType
-		scanErr := rows.Scan(&id, &name, &created, &t)
-		if scanErr != nil {
-			err = scanErr
+		p := Page{ReleaseID: release.Id}
+		err = rows.Scan(&p.Id, &p.Name, &p.CreatedAt)
+		if err != nil {
+			return pages, err
 		}
-		pages = append(pages, Page{id, name, created, releaseId, t.String()})
+		p.MimeType = MimeTypeFromFilename(p.Name)
+		pages = append(pages, p)
 	}
+	err = rows.Err()
 	return pages, err
 }
 
@@ -167,8 +159,7 @@ func (p *Page) Validate() error {
 	if len(p.Name) > PGmax_len_name {
 		return ErrPageNameTooLong
 	}
-
-	if MimeTypeUnknown == NewMimeType(p.MimeType) {
+	if MimeTypeUnknown == MimeTypeFromFilename(p.Name) {
 		return ErrPageUnsupportedMimeType
 	}
 	return nil
@@ -183,9 +174,9 @@ func (p *Page) Save(db database.DB) error {
 	// TODO - Make sure to save image data to disk before saving the Page.
 
 	const query = "INSERT INTO " + t_pages + " (" +
-		PGc_name + ", " + PGc_created_at + ", " + PGc_release_id + ", " + PGc_mime_type + ") VALUES (?, ?, ?, ?)"
+		PGc_name + ", " + PGc_created_at + ", " + PGc_release_id + ") VALUES (?, ?, ?)"
 
-	res, err := db.Exec(query, p.Name, p.CreatedAt, p.ReleaseID, NewMimeType(p.MimeType))
+	res, err := db.Exec(query, p.Name, p.CreatedAt, p.ReleaseID)
 	if err != nil {
 		return err
 	}
@@ -204,7 +195,7 @@ func (p *Page) Update(db database.DB) error {
 
 // Delete removes the Page from the database and deletes the page image from disk.
 func (p *Page) Delete(db database.DB) error {
-	const query = "DELETE FROM " + t_pages + " WHERE " + PGc_id + " = ? LIMIT 1"
-	_, err := db.Exec(query, p.Id)
+	const query = "DELETE FROM " + t_pages + " WHERE " + PGc_id + " = ? AND " + PGc_release_id + " = ? LIMIT 1"
+	_, err := db.Exec(query, p.Id, p.ReleaseID)
 	return err
 }

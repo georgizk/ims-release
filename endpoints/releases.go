@@ -60,7 +60,14 @@ func listReleases(db database.DB, cfg *config.Config) http.HandlerFunc {
 			encoder.Encode(listReleasesResponse{&errMsg, []models.Release{}})
 			return
 		}
-		releases, listErr := models.ListReleases(db, request.ProjectID)
+
+		project, findErr := models.FindProject(db, request.ProjectID)
+		if findErr != nil {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		releases, listErr := models.ListReleases(db, project)
 		if listErr != nil {
 			log.Println("[---] List error:", listErr)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -120,8 +127,7 @@ func createRelease(db database.DB, cfg *config.Config) http.HandlerFunc {
 			encoder.Encode(createReleaseResponse{&errMsg, false, 0})
 			return
 		}
-		release := models.NewRelease(project.Id, request.Version, request.Identifier)
-		release.Status = request.Status
+		release := models.NewRelease(project, request.Identifier, request.Version, request.Status, time.Now())
 		insertErr := release.Save(db)
 		if insertErr != nil {
 			log.Println("[---] Insert error:", insertErr)
@@ -175,7 +181,7 @@ func getRelease(db database.DB, cfg *config.Config) http.HandlerFunc {
 			encoder.Encode(getReleaseResponse{&errMsg, "", "", 0, models.RStatusUnknownStr, time.Now()})
 			return
 		}
-		release, findErr := models.FindRelease(db, project.Id, request.ReleaseID)
+		release, findErr := models.FindRelease(db, project, request.ReleaseID)
 		if findErr != nil {
 			log.Printf("[---] Find error:", findErr)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -237,7 +243,13 @@ func updateRelease(db database.DB, cfg *config.Config) http.HandlerFunc {
 			return
 		}
 
-		release, err := models.FindRelease(db, request.ProjectID, request.ReleaseID)
+		project, findErr := models.FindProject(db, request.ProjectID)
+		if findErr != nil {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		release, err := models.FindRelease(db, project, request.ReleaseID)
 		if err != nil {
 			log.Println("[---] Release not found")
 			w.WriteHeader(http.StatusNotFound)
@@ -263,6 +275,7 @@ func updateRelease(db database.DB, cfg *config.Config) http.HandlerFunc {
 		release.Version = request.Version
 		release.Identifier = request.Identifier
 		release.Status = request.Status
+		release.ReleasedOn = time.Now()
 
 		updateErr := release.Update(db)
 		if updateErr != nil {
@@ -305,13 +318,19 @@ func deleteRelease(db database.DB, cfg *config.Config) http.HandlerFunc {
 			return
 		}
 
-		release, err := models.FindRelease(db, request.ProjectID, request.ReleaseID)
+		project, findErr := models.FindProject(db, request.ProjectID)
+		if findErr != nil {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		release, err := models.FindRelease(db, project, request.ReleaseID)
 		if err != nil {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
-		pages, err := models.ListPages(db, request.ReleaseID)
+		pages, err := models.ListPages(db, release)
 		if err != nil {
 			log.Println("[---] Delete error:", err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -363,7 +382,7 @@ func downloadRelease(db database.DB, cfg *config.Config, sp storage_provider.Bin
 			return
 		}
 
-		release, err := models.FindRelease(db, projectId, releaseId)
+		release, err := models.FindRelease(db, project, releaseId)
 		if err != nil {
 			log.Println("unable to find release")
 			w.WriteHeader(http.StatusNotFound)
@@ -383,7 +402,7 @@ func downloadRelease(db database.DB, cfg *config.Config, sp storage_provider.Bin
 			return
 		}
 
-		pages, err := models.ListPages(db, release.Id)
+		pages, err := models.ListPages(db, release)
 		if err != nil {
 			log.Println("failed to retrieve list of pages")
 			w.WriteHeader(http.StatusNotFound)

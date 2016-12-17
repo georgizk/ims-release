@@ -24,10 +24,10 @@ type ProjectStatus uint32
 const (
 	PStatusUnknown      ProjectStatus = 0
 	PStatusUnknownStr   string        = "unknown"
-	PStatusPublished    ProjectStatus = 1
-	PStatusPublishedStr string        = "completed"
-	PStatusOngoing      ProjectStatus = 2
-	PStatusOngoingStr   string        = "active"
+	PStatusCompleted    ProjectStatus = 1
+	PStatusCompletedStr string        = "completed"
+	PStatusActive       ProjectStatus = 2
+	PStatusActiveStr    string        = "active"
 	PStatusStalled      ProjectStatus = 3
 	PStatusStalledStr   string        = "stalled"
 	PStatusDropped      ProjectStatus = 4
@@ -36,10 +36,10 @@ const (
 
 func (s ProjectStatus) String() string {
 	switch s {
-	case PStatusPublished:
-		return PStatusPublishedStr
-	case PStatusOngoing:
-		return PStatusOngoingStr
+	case PStatusCompleted:
+		return PStatusCompletedStr
+	case PStatusActive:
+		return PStatusActiveStr
 	case PStatusDropped:
 		return PStatusDroppedStr
 	case PStatusStalled:
@@ -51,10 +51,10 @@ func (s ProjectStatus) String() string {
 
 func NewProjectStatus(val string) ProjectStatus {
 	switch val {
-	case PStatusPublishedStr:
-		return PStatusPublished
-	case PStatusOngoingStr:
-		return PStatusOngoing
+	case PStatusCompletedStr:
+		return PStatusCompleted
+	case PStatusActiveStr:
+		return PStatusActive
 	case PStatusStalledStr:
 		return PStatusStalled
 	case PStatusDroppedStr:
@@ -87,14 +87,14 @@ var (
 
 // NewProject constructs a brand new Project instance, with a default state lacking information about its (future)
 // position in a database.
-func NewProject(name, shorthand, description string) Project {
+func NewProject(name, shorthand, description, status string, tm time.Time) Project {
 	return Project{
 		0,
 		name,
 		shorthand,
 		description,
-		PStatusOngoingStr,
-		time.Now(),
+		status,
+		tm,
 	}
 }
 
@@ -135,9 +135,14 @@ func ListProjects(db database.DB) ([]Project, error) {
 		var p Project
 		var s ProjectStatus
 		err = rows.Scan(&p.Id, &p.Name, &p.Shorthand, &p.Description, &s, &p.CreatedAt)
+		if err != nil {
+			return projects, err
+		}
+
 		p.Status = s.String()
 		projects = append(projects, p)
 	}
+	err = rows.Err()
 	return projects, err
 }
 

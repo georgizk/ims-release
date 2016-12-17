@@ -75,84 +75,80 @@ const (
 
 // NewRelease constructs a brand new Release instance, with a default state lacking information its (future) position in
 // a database.
-func NewRelease(projectId, version uint32, chapterName string) Release {
+func NewRelease(p Project, identifier string, version uint32, status string, tm time.Time) Release {
 	return Release{
 		0,
-		chapterName,
+		identifier,
 		"ims", // @TODO make this variable
 		version,
-		RStatusDraftStr,
-		time.Now(),
-		projectId,
+		status,
+		tm,
+		p.Id,
 	}
 }
 
 // FindRelease attempts to lookup a release by ID.
-func FindRelease(db database.DB, projectId uint32, releaseId uint32) (Release, error) {
+func FindRelease(db database.DB, project Project, releaseId uint32) (Release, error) {
 	r := Release{}
 	var s ReleaseStatus
 
 	const query = "SELECT " + Rc_identifier + ", " + Rc_version + ", " +
-		Rc_status + ", " + Rc_released_on + ", " + Rc_project_id +
+		Rc_status + ", " + Rc_released_on +
 		" FROM " + t_releases + " WHERE " + Rc_id + " = ? AND " + Rc_project_id + " = ?"
 
-	row := db.QueryRow(query, releaseId, projectId)
-	if row == nil {
+	row := db.QueryRow(query, releaseId, project.Id)
+	err := row.Scan(&r.Identifier, &r.Version, &s, &r.ReleasedOn)
+
+	if err == database.ErrNoRows {
 		return Release{}, ErrNoSuchRelease
-	}
-	err := row.Scan(&r.Identifier, &r.Version, &s, &r.ReleasedOn, &r.ProjectID)
-	if err != nil {
+	} else if err != nil {
 		return Release{}, err
 	}
+
 	r.Id = releaseId
+	r.ProjectID = project.Id
 	r.Status = s.String()
 	r.Scanlator = "ims" // @TODO make this variable
 	return r, nil
 }
 
 // ListReleases attempts to obtain a list of all of the releases in the database.
-func ListReleases(db database.DB, projectId uint32) ([]Release, error) {
+func ListReleases(db database.DB, project Project) ([]Release, error) {
 	releases := []Release{}
 
 	const query = "SELECT " + Rc_id + ", " + Rc_identifier + ", " +
 		Rc_version + ", " + Rc_status + ", " + Rc_released_on +
 		" FROM " + t_releases + " WHERE " + Rc_project_id + " = ?"
-	rows, err := db.Query(query, projectId)
+	rows, err := db.Query(query, project.Id)
 	if err != nil {
-		return []Release{}, err
+		return releases, err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var id, version uint32
-		var chapter string
+		// @TODO make scanlator variable
+		release := Release{ProjectID: project.Id, Scanlator: "ims"}
 		var status ReleaseStatus
-		var released time.Time
-		scanErr := rows.Scan(&id, &chapter, &version, &status, &released)
-		if scanErr != nil {
-			err = scanErr
+		err = rows.Scan(&release.Id, &release.Identifier, &release.Version, &status, &release.ReleasedOn)
+		if err != nil {
+			return releases, err
 		}
-		releases = append(releases, Release{
-			id,
-			chapter,
-			"ims", // @TODO make this variable
-			version,
-			status.String(),
-			released,
-			projectId,
-		})
+
+		release.Status = status.String()
+		releases = append(releases, release)
 	}
+	err = rows.Err()
 	return releases, err
 }
 
 // Validate checks that the "status" of the project is one of the accepted ReleaseStatus values.
 func (r *Release) Validate() error {
-	if NewReleaseStatus(r.Status) != RStatusUnknown {
-		return nil
+	if NewReleaseStatus(r.Status) == RStatusUnknown {
+		return ErrInvalidReleaseStatus
 	}
 	if len(r.Identifier) > Rmax_len_identifier {
 		return ErrFieldTooLong
 	}
-	return ErrInvalidReleaseStatus
+	return nil
 }
 
 // Save inserts the release into the database and updates its Id field.
@@ -184,19 +180,17 @@ func (r *Release) Update(db database.DB) error {
 	if validErr != nil {
 		return validErr
 	}
-	now := time.Now()
 	const query = "UPDATE " + t_releases + " SET " +
 		Rc_identifier + " = ?, " + Rc_version + " = ?," + Rc_status + " = ?," +
-		Rc_released_on + " = ? WHERE " + Rc_id + " = ? LIMIT 1"
-	_, err := db.Exec(query, r.Identifier, r.Version, NewReleaseStatus(r.Status), now, r.Id)
-	r.ReleasedOn = now
+		Rc_released_on + " = ? WHERE " + Rc_id + " = ? AND " + Rc_project_id + " = ? LIMIT 1"
+	_, err := db.Exec(query, r.Identifier, r.Version, NewReleaseStatus(r.Status), r.ReleasedOn, r.Id, r.ProjectID)
 	return err
 }
 
 // Delete removes the Release and all associated pages from the database.
 func (r *Release) Delete(db database.DB) error {
-	const query = "DELETE FROM " + t_releases + " WHERE " + Rc_id + " = ? LIMIT 1"
-	_, err := db.Exec(query, r.Id)
+	const query = "DELETE FROM " + t_releases + " WHERE " + Rc_id + " = ?  AND " + Rc_project_id + " = ? LIMIT 1"
+	_, err := db.Exec(query, r.Id, r.ProjectID)
 	return err
 }
 

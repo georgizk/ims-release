@@ -61,13 +61,20 @@ func listPages(db database.DB, cfg *config.Config) http.HandlerFunc {
 			return
 		}
 
-		release, findErr := models.FindRelease(db, request.ProjectID, request.ReleaseID)
+		project, err := models.FindProject(db, request.ProjectID)
+		if err != nil {
+			log.Println("unable to find project")
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		release, findErr := models.FindRelease(db, project, request.ReleaseID)
 		if findErr != nil {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
-		pages, listErr := models.ListPages(db, release.Id)
+		pages, listErr := models.ListPages(db, release)
 		if listErr != nil {
 			log.Println("[---] List error:", listErr)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -127,7 +134,7 @@ func createPage(db database.DB, cfg *config.Config, sp storage_provider.Binary) 
 			return
 		}
 
-		release, err := models.FindRelease(db, request.ProjectID, request.ReleaseID)
+		release, err := models.FindRelease(db, project, request.ReleaseID)
 		if err != nil {
 			w.WriteHeader(http.StatusNotFound)
 			errStr := errMsgNoSuchRelease
@@ -230,14 +237,14 @@ func getPage(db database.DB, cfg *config.Config, sp storage_provider.Binary) htt
 			return
 		}
 
-		release, findErr := models.FindRelease(db, projectId, releaseId)
+		release, findErr := models.FindRelease(db, project, releaseId)
 		if findErr != nil {
 			log.Println("[---] Find error:", findErr)
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
-		page, findErr := models.FindPageByName(db, release.Id, vars["name"])
+		page, findErr := models.FindPageByName(db, release, vars["name"])
 		if findErr != nil {
 			log.Println("[---] Find error:", findErr)
 			w.WriteHeader(http.StatusNotFound)
@@ -297,14 +304,14 @@ func deletePage(db database.DB, cfg *config.Config, sp storage_provider.Binary) 
 			return
 		}
 
-		release, findErr := models.FindRelease(db, request.ProjectID, request.ReleaseID)
+		release, findErr := models.FindRelease(db, project, request.ReleaseID)
 		if findErr != nil {
 			log.Println("[---] Find error:", findErr)
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
-		page, findErr := models.FindPage(db, request.ReleaseID, request.PageID)
+		page, findErr := models.FindPage(db, release, request.PageID)
 		if findErr != nil {
 			log.Println("[---] Find error:", findErr)
 			w.WriteHeader(http.StatusNotFound)

@@ -85,8 +85,7 @@ func createProject(db database.DB, cfg *config.Config) http.HandlerFunc {
 			encoder.Encode(createProjectResponse{&errMsg, false, 0})
 			return
 		}
-		project := models.NewProject(request.Name, request.ProjectName, request.Description)
-		project.Status = request.Status
+		project := models.NewProject(request.Name, request.ProjectName, request.Description, request.Status, time.Now())
 		insertErr := project.Save(db)
 		if insertErr != nil {
 			log.Println("[---] Insert error:", insertErr)
@@ -243,7 +242,7 @@ func deleteProject(db database.DB, cfg *config.Config) http.HandlerFunc {
 			return
 		}
 
-		releases, err := models.ListReleases(db, project.Id)
+		releases, err := models.ListReleases(db, project)
 		if err != nil {
 			log.Println("[---] Delete error:", err)
 			w.WriteHeader(http.StatusInternalServerError)

@@ -324,6 +324,7 @@ POST /projects/{projectId}/releases/{releaseId}/pages
 * A release with id `releaseId` MUST exist
 * `name` MUST end in either .png or .jpg
 * `name` MUST be unique for that release
+* `name` MUST be less than 256 bytes
 * `data` MUST be a base64 encoded image of type matchign the extension in `name`
 
 #### Parameters
