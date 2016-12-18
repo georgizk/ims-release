@@ -205,7 +205,7 @@ func TestSaveProject(t *testing.T) {
 
 	// tests validation failed case
 	p.Status = "invalid"
-	err = p.Save(db)
+	p, err = SaveProject(db, p)
 	assert.Equal(t, ErrInvalidProjectStatus, err)
 
 	// success case
@@ -221,16 +221,16 @@ func TestSaveProject(t *testing.T) {
 	mock.ExpectExec(query).WithArgs(p.Name, p.Shorthand, p.Description, 1, p.CreatedAt).WillReturnResult(sqlmock.NewErrorResult(expErr2))
 
 	// tests success case
-	err = p.Save(db)
+	p, err = SaveProject(db, p)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, uint32(7), p.Id)
 
 	// tests error case
-	err = p.Save(db)
+	p, err = SaveProject(db, p)
 	assert.Equal(t, expErr, err)
 
 	// tests result error case
-	err = p.Save(db)
+	p, err = SaveProject(db, p)
 	assert.Equal(t, expErr2, err)
 
 	err = mock.ExpectationsWereMet()
@@ -250,7 +250,7 @@ func TestUpdateProject(t *testing.T) {
 
 	// tests validation failed case
 	p.Status = "invalid"
-	err = p.Update(db)
+	p, err = UpdateProject(db, p)
 	assert.Equal(t, ErrInvalidProjectStatus, err)
 
 	// success case
@@ -262,11 +262,11 @@ func TestUpdateProject(t *testing.T) {
 	mock.ExpectExec(query).WithArgs(p.Name, p.Shorthand, p.Description, 2, p.Id).WillReturnError(expErr)
 
 	// tests success case
-	err = p.Update(db)
+	p, err = UpdateProject(db, p)
 	assert.Equal(t, nil, err)
 
 	// tests error case
-	err = p.Update(db)
+	p, err = UpdateProject(db, p)
 	assert.Equal(t, expErr, err)
 
 	err = mock.ExpectationsWereMet()
@@ -284,10 +284,10 @@ func TestDeleteProject(t *testing.T) {
 	p.Id = 7
 	mock.ExpectExec(query).WillReturnError(expErr).WithArgs(p.Id)
 	mock.ExpectExec(query).WithArgs(p.Id).WillReturnResult(sqlmock.NewResult(7, 1))
-	err = p.Delete(db)
+	p, err = DeleteProject(db, p)
 	assert.Equal(t, expErr, err)
 
-	err = p.Delete(db)
+	p, err = DeleteProject(db, p)
 	assert.Equal(t, nil, err)
 
 	err = mock.ExpectationsWereMet()

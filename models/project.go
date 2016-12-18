@@ -160,10 +160,10 @@ func (p *Project) Validate() error {
 }
 
 // Save inserts the project into the database and updates its Id field.
-func (p *Project) Save(db database.DB) error {
+func SaveProject(db database.DB, p Project) (Project, error) {
 	validErr := p.Validate()
 	if validErr != nil {
-		return validErr
+		return p, validErr
 	}
 
 	const query = "INSERT INTO " + t_projects + " (" +
@@ -172,21 +172,20 @@ func (p *Project) Save(db database.DB) error {
 
 	res, err := db.Exec(query, p.Name, p.Shorthand, p.Description, NewProjectStatus(p.Status), p.CreatedAt)
 	if err != nil {
-		return err
+		return p, err
 	}
 	id, err := res.LastInsertId()
 	if err != nil {
-		return err
+		return p, err
 	}
 	p.Id = uint32(id)
-	return nil
+	return p, nil
 }
 
-// Update modifies all of the fields of a Project in place with whatever is currently in the struct.
-func (p *Project) Update(db database.DB) error {
+func UpdateProject(db database.DB, p Project) (Project, error) {
 	validErr := p.Validate()
 	if validErr != nil {
-		return validErr
+		return p, validErr
 	}
 
 	const query = "UPDATE " + t_projects + " SET " +
@@ -194,13 +193,13 @@ func (p *Project) Update(db database.DB) error {
 		Pc_status + " = ? WHERE " + Pc_id + " = ? LIMIT 1"
 
 	_, err := db.Exec(query, p.Name, p.Shorthand, p.Description, NewProjectStatus(p.Status), p.Id)
-	return err
+	return p, err
 }
 
 // Delete removes the Project and all associated releases from the database.
-func (p *Project) Delete(db database.DB) error {
+func DeleteProject(db database.DB, p Project) (Project, error) {
 	const query = "DELETE FROM " + t_projects + " WHERE " +
 		Pc_id + " = ? LIMIT 1"
 	_, err := db.Exec(query, p.Id)
-	return err
+	return p, err
 }
