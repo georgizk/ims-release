@@ -152,10 +152,10 @@ func (r *Release) Validate() error {
 }
 
 // Save inserts the release into the database and updates its Id field.
-func (r *Release) Save(db database.DB) error {
+func SaveRelease(db database.DB, r Release) (Release, error) {
 	validErr := r.Validate()
 	if validErr != nil {
-		return validErr
+		return r, validErr
 	}
 
 	const query = "INSERT INTO " + t_releases + " (" +
@@ -163,35 +163,34 @@ func (r *Release) Save(db database.DB) error {
 		Rc_released_on + ", " + Rc_project_id + ") VALUES (?, ?, ?, ?, ?)"
 	res, err := db.Exec(query, r.Identifier, r.Version, NewReleaseStatus(r.Status), r.ReleasedOn, r.ProjectID)
 	if err != nil {
-		return err
+		return r, err
 	}
 	id, err := res.LastInsertId()
 	if err != nil {
-		return err
+		return r, err
 	}
 	r.Id = uint32(id)
-	return nil
+	return r, nil
 }
 
 // Update modifies all of the fields of a Release in place with whatever is currently in the struct.
-func (r *Release) Update(db database.DB) error {
-
+func UpdateRelease(db database.DB, r Release) (Release, error) {
 	validErr := r.Validate()
 	if validErr != nil {
-		return validErr
+		return r, validErr
 	}
 	const query = "UPDATE " + t_releases + " SET " +
 		Rc_identifier + " = ?, " + Rc_version + " = ?," + Rc_status + " = ?," +
 		Rc_released_on + " = ? WHERE " + Rc_id + " = ? AND " + Rc_project_id + " = ? LIMIT 1"
 	_, err := db.Exec(query, r.Identifier, r.Version, NewReleaseStatus(r.Status), r.ReleasedOn, r.Id, r.ProjectID)
-	return err
+	return r, err
 }
 
 // Delete removes the Release and all associated pages from the database.
-func (r *Release) Delete(db database.DB) error {
+func DeleteRelease(db database.DB, r Release) (Release, error) {
 	const query = "DELETE FROM " + t_releases + " WHERE " + Rc_id + " = ?  AND " + Rc_project_id + " = ? LIMIT 1"
 	_, err := db.Exec(query, r.Id, r.ProjectID)
-	return err
+	return r, err
 }
 
 func GenerateArchiveName(p Project, r Release) string {

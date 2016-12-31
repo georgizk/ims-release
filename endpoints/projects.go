@@ -97,7 +97,6 @@ func createProject(db database.DB) http.HandlerFunc {
 
 // GET /projects/{projectId}
 func fetchProjectUsingRequestArgs(db database.DB, w http.ResponseWriter, r *http.Request) (models.Project, error) {
-
 	vars := mux.Vars(r)
 	var projectId uint32
 	numFound, err := fmt.Sscanf(vars["projectId"], "%d", &projectId)

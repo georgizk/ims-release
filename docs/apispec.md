@@ -168,8 +168,8 @@ POST /projects/{projectId}/releases
 
 Name | Type | Description
 -----|------|------------
-identifier | string | A unique identifier for the chapter
-version | integer | The version of the release of the particular chapter
+identifier | string | A unique identifier for the release
+version | integer | The version of the release corresponding to that identifier
 status | string | The release status, "released" or "draft"
 
 #### Response
@@ -224,7 +224,7 @@ Name | Type | Description
 -----|------|------------
 projectId | integer | The unique id of the project under which the release was created
 releaseId | integer | The unique id of the release
-chapter | string | The new chapter number
+identifier | string | The new unique identifier for the release
 version | integer | The new version number for the release
 status | string | The new status of the release
 
@@ -271,7 +271,7 @@ GET /projects/{projectId}/releases/{releaseId}/download/{archiveName}
 * The archive MUST contain a credit page.
 * Once released, the archive MUST remain unique.
 
-The archive name follows the format {shorthand} - {chapter}[{version}][{groupName}].zip
+The archive name follows the format {shorthand} - {identifier}[{version}][{groupName}].zip
 Note that the square brackets are meant to be present in the actual URL. For example, one may request the following.
 
 ```

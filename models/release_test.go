@@ -181,7 +181,7 @@ func TestSaveRelease(t *testing.T) {
 
 	// tests validation failed case
 	r.Status = "invalid"
-	err = r.Save(db)
+	r, err = SaveRelease(db, r)
 	assert.Equal(t, ErrInvalidReleaseStatus, err)
 
 	// success case
@@ -197,16 +197,16 @@ func TestSaveRelease(t *testing.T) {
 	mock.ExpectExec(query).WithArgs(r.Identifier, r.Version, NewReleaseStatus(r.Status), r.ReleasedOn, r.ProjectID).WillReturnResult(sqlmock.NewErrorResult(expErr2))
 
 	// tests success case
-	err = r.Save(db)
+	r, err = SaveRelease(db, r)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, uint32(7), r.Id)
 
 	// tests error case
-	err = r.Save(db)
+	r, err = SaveRelease(db, r)
 	assert.Equal(t, expErr, err)
 
 	// tests result error case
-	err = r.Save(db)
+	r, err = SaveRelease(db, r)
 	assert.Equal(t, expErr2, err)
 
 	err = mock.ExpectationsWereMet()
@@ -227,7 +227,7 @@ func TestUpdateRelease(t *testing.T) {
 
 	// tests validation failed case
 	r.Status = "invalid"
-	err = r.Update(db)
+	r, err = UpdateRelease(db, r)
 	assert.Equal(t, ErrInvalidReleaseStatus, err)
 
 	// success case
@@ -239,11 +239,11 @@ func TestUpdateRelease(t *testing.T) {
 	mock.ExpectExec(query).WithArgs(r.Identifier, r.Version, NewReleaseStatus(r.Status), r.ReleasedOn, r.Id, r.ProjectID).WillReturnError(expErr)
 
 	// tests success case
-	err = r.Update(db)
+	r, err = UpdateRelease(db, r)
 	assert.Equal(t, nil, err)
 
 	// tests error case
-	err = r.Update(db)
+	r, err = UpdateRelease(db, r)
 	assert.Equal(t, expErr, err)
 
 	err = mock.ExpectationsWereMet()
@@ -262,10 +262,10 @@ func TestDeleteRelease(t *testing.T) {
 	r.ProjectID = 4
 	mock.ExpectExec(query).WillReturnError(expErr).WithArgs(r.Id, r.ProjectID)
 	mock.ExpectExec(query).WithArgs(r.Id, r.ProjectID).WillReturnResult(sqlmock.NewResult(7, 1))
-	err = r.Delete(db)
+	r, err = DeleteRelease(db, r)
 	assert.Equal(t, expErr, err)
 
-	err = r.Delete(db)
+	r, err = DeleteRelease(db, r)
 	assert.Equal(t, nil, err)
 
 	err = mock.ExpectationsWereMet()
