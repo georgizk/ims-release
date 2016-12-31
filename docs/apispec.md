@@ -18,6 +18,40 @@ Compound types will be represented as `[<type>]` for arrays with values of all t
 
 Any parameter that is optional will have a type prefixed with `optional`. For example, the type `optional integer` indicates that the field is not required but, if provided, must be an integer.
 
+## Types
+
+Below is a description of the various types
+
+### Project
+
+Name | Type | Description
+-----|------|------------
+id | integer | The project id
+name | string | The descriptive name of the project
+shorthand | string | The unique project name shorthand, used in file names
+description | string | The description of the project
+status | string | The current status of the project
+createdAt | string | The date when the project was created
+
+### Release
+
+Name | Type | Description
+-----|------|------------
+id | integer | The release id
+identifer | string | The unique identifier for the release
+scanlator | string | The scanlator
+version | integer | The release version number
+status | string | The status of the release
+releasedOn | string | The date that the release was made with its current status
+
+### Page
+
+Name | Type | Description
+-----|------|------------
+id | integer | The page id
+name | string | Page filename
+createdAt | string | The date when the page was created
+
 ## Endpoints
 
 ### Get a list of all projects
@@ -34,7 +68,8 @@ None
 
 Name | Type | Description
 -----|------|------------
-projects | `[{"id": string, "name": string, "shorthand": string, "description": string, "status": string, "createdAt": string}]` | An array containing objects that identify all existing projects
+error | string | Error string
+result | Project[] | An array containing all existing projects
 
 ### Create a new project
 
@@ -60,8 +95,8 @@ status | string | The current status of the project. One of "active", "completed
 
 Name | Type | Description
 -----|------|------------
-success | bool | True if there was no problem creating the project
-id | integer | The id of the newly created project, if successful
+error | string | Error string
+result | Project[] | An array containing the newly created project
 
 ### Get information about a project
 
@@ -79,11 +114,8 @@ projectId | integer | The identifier of a project, as returned by the create end
 
 Name | Type | Description
 -----|------|------------
-createdAt | string | The date when the project was created
-name | string | The descriptive name of the project
-shorthand | string | The unique project name shorthand, used in file names
-status | string | The current status of the project
-description | string | The description of the project
+error | string | Error string
+result | Project[] | An array containing the project
 
 ### Update project information
 
@@ -111,7 +143,8 @@ description | string | A new description for the project
 
 Name | Type | Description
 -----|------|------------
-success | bool | True if the update could take place, else false
+error | string | Error string
+result | Project[] | An array containing the updated project
 
 ### Delete a project
 
@@ -132,7 +165,8 @@ projectId | integer | The unique identifier for the project
 
 Name | Type | Description
 -----|------|------------
-success | bool | True if the project could be deleted, else false
+error | string | Error string
+result | Project[] | An array containing the deleted project
 
 ### Get a list of releases for a project
 
@@ -152,7 +186,8 @@ projectId | integer | The unique identifier for the project
 
 Name | Type | Description
 -----|------|------------
-releases | `[{"id": integer, "identifier": string, "scanlator": string, "status": string, "releasedOn": string, "version": integer}]` | An array of objects containing information about releases
+error | string | Error string
+result | Release[] | An array containing all of the project's releases
 
 ### Create a new release
 
@@ -176,8 +211,8 @@ status | string | The release status, "released" or "draft"
 
 Name | Type | Description
 -----|------|------------
-success | bool | True if the release could be made, else false
-id | integer | The newly created id of the release if successful
+error | string | Error string
+result | Release[] | An array containing the newly created release
 
 ### Get information about a release
 
@@ -199,11 +234,8 @@ releaseId | integer | The unique id of the release
 
 Name | Type | Description
 -----|------|------------
-identifer | string | The unique identifier for the release
-scanlator | string | The scanlator
-version | integer | The release version number
-status | string | The status of the release
-releasedOn | string | The date that the release was made with its current status
+error | string | Error string
+result | Release[] | An array containing the release
 
 ### Update information about a release
 
@@ -232,7 +264,8 @@ status | string | The new status of the release
 
 Name | Type | Description
 -----|------|------------
-success | bool | True if the update could take place successfully, else false
+error | string | Error string
+result | Release[] | An array containing the updated release
 
 ### Delete a release
 
@@ -256,7 +289,8 @@ releaseId | integer | The unique id of the release
 
 Name | Type | Description
 -----|------|------------
-success | bool | True if the project could be deleted, else false
+error | string | Error string
+result | Release[] | An array containing the deleted release
 
 ### Download an archive of a release
 
@@ -289,8 +323,8 @@ archiveName | string | The name of the archive
 #### Response
 
 * Status 200: The zip file will be served directly
-* Status 4xx: Invalid request, with a string error message
-* Status 5xx: Server error, with a string error message
+* Status 4xx: Invalid request
+* Status 5xx: Server error
 
 ### Get a list of pages in a release
 
@@ -312,7 +346,8 @@ releaseId | integer | The unique id of the release
 
 Name | Type | Description
 -----|------|------------
-pages | `[{"id": integer, "name": string, "createdAt": string, "mimeType": string}]`| An array of objects describing each of the pages part of the release
+error | string | Error string
+result | Page[] | An array containing the pages for the release
 
 ### Add a new page to a release
 
@@ -336,12 +371,12 @@ releaseId | integer | The unique id of the release
 name | string | The page number
 data | string | The base64-encoded raw image data
 
-#### Release
+#### Response
 
 Name | Type | Description
 -----|------|------------
-success | bool | True if the page could be uploaded, else false e.g. if the release has a completed status
-id | integer | The unique id of the newly created page
+error | string | Error string
+result | Page[] | An array containing the newly created page
 
 ### Download a page
 
@@ -363,8 +398,8 @@ filename | string | The filename of the page
 #### Response
 
 * Status 200: The image file will be served directly
-* Status 4xx: Invalid request, with a string error message
-* Status 5xx: Server error, with a string error message
+* Status 4xx: Invalid request
+* Status 5xx: Server error
 
 ### Delete a page from a release
 
@@ -387,4 +422,5 @@ pageId | integer | The unique identifier of the page to delete
 
 Name | Type | Description
 -----|------|------------
-success | bool | True if the page could be deleted, else false e.g. if the release has already been moved to a complete status
+error | string | Error string
+result | Page[] | An array containing the deleted page
