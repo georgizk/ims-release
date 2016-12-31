@@ -14,7 +14,6 @@
 
 <body>
 
-<div>
 <h2>Projects</h2>
 <table id="projects">
 <thead>
@@ -38,7 +37,7 @@
 <div id="projectAdd" style="display:none;">
 <form id="projectAddForm">
   <label>Name <input type="text" name="name"></label>
-  <label>Shorthand <input type="text" name="projectName"></label>
+  <label>Shorthand <input type="text" name="shorthand"></label>
   <label>Description <textarea name="description"></textarea></label>
   <label>Status <select name="status"><option value="active">Active</option><option value="completed">Completed</option><option value="stalled">Stalled</option><option value="dropped">Dropped</option></select></label>
   <input type="submit" value="Create">
@@ -48,7 +47,7 @@
 <div id="projectEdit" style="display:none;">
 <form id="projectEditForm">
   <label>Name <input type="text" name="name"></label>
-  <label>Shorthand <input type="text" name="projectName"></label>
+  <label>Shorthand <input type="text" name="shorthand"></label>
   <label>Description <textarea name="description"></textarea></label>
   <label>Status <select name="status"><option value="active">Active</option><option value="completed">Completed</option><option value="stalled">Stalled</option><option value="dropped">Dropped</option></select></label>
   <input type="submit" value="Save">
@@ -85,7 +84,7 @@
 <form id="releaseAddForm">
   <label>Identifier <input type="text" name="identifier"></label>
   <label>Version <input type="text" name="version"></label>
-  <label>Status <select name="status"><option value="draft">Draft</option><option value="released">Released</option></select>
+  <label>Status <select name="status"><option value="draft">Draft</option><option value="released">Released</option></select></label>
   <input type="submit" value="Create">
 </form>
 </div>
@@ -94,7 +93,7 @@
 <form id="releaseEditForm">
   <label>Identifier <input type="text" name="identifier"></label>
   <label>Version <input type="text" name="version"></label>
-  <label>Status <select name="status"><option value="draft">Draft</option><option value="released">Released</option></select>
+  <label>Status <select name="status"><option value="draft">Draft</option><option value="released">Released</option></select></label>
   <input type="submit" value="Save">
 </form>
 </div>

@@ -73,7 +73,7 @@ var imsApiApp = function() {
       projectAddForm.submit(imsApiApp.createSubmitCallback(function(data) {
         imsApiClient.createProject(config, data, function(r) {
           console.log(r)
-          imsApiClient.getProjects(config, imsApiApp.createCallback('projects', projectsTableId))
+          imsApiClient.getProjects(config, imsApiApp.createCallback('result', projectsTableId))
           $.fancybox.close()
         })
       }))
@@ -84,7 +84,7 @@ var imsApiApp = function() {
         console.log("loading releases for project " + id)
         var table = $(releasesTableId).DataTable()
         table.clear()
-        imsApiClient.getReleases(config, id, imsApiApp.createCallback('releases', releasesTableId))
+        imsApiClient.getReleases(config, id, imsApiApp.createCallback('result', releasesTableId))
         
         var editForm = $(projectEditFormId)
         var fields = editForm.find(':input')
@@ -97,7 +97,7 @@ var imsApiApp = function() {
         editForm.submit(imsApiApp.createSubmitCallback(function(data) {
           imsApiClient.updateProject(config, id, data, function(r) {
             console.log(r)
-            imsApiClient.getProjects(config, imsApiApp.createCallback('projects', projectsTableId))
+            imsApiClient.getProjects(config, imsApiApp.createCallback('result', projectsTableId))
             $.fancybox.close()
             $(projectEditFormId).off('submit')
           })
@@ -109,7 +109,7 @@ var imsApiApp = function() {
           data.version = parseInt(data.version)
           imsApiClient.createRelease(config, id, data, function(r) {
             console.log(r)
-            imsApiClient.getReleases(config, id, imsApiApp.createCallback('releases', releasesTableId))
+            imsApiClient.getReleases(config, id, imsApiApp.createCallback('result', releasesTableId))
             $.fancybox.close()
             $(releaseAddFormId).off('submit')
           })
@@ -121,7 +121,7 @@ var imsApiApp = function() {
           e.preventDefault()
           imsApiClient.deleteProject(config, id, function(r) {
             console.log(r)
-            imsApiClient.getProjects(config, imsApiApp.createCallback('projects', projectsTableId))
+            imsApiClient.getProjects(config, imsApiApp.createCallback('result', projectsTableId))
             $.fancybox.close()
             $(projectDeleteId).off('click')
           })
@@ -149,7 +149,7 @@ var imsApiApp = function() {
         console.log("loading pages for project " + projectId + " and release " + id)
         var table = $(pagesTableId).DataTable()
         table.clear()
-        imsApiClient.getPages(config, projectId, id, imsApiApp.createCallback('pages', pagesTableId))     
+        imsApiClient.getPages(config, projectId, id, imsApiApp.createCallback('result', pagesTableId))     
 
         var editForm = $(releaseEditFormId)
         var fields = editForm.find(':input')
@@ -163,7 +163,7 @@ var imsApiApp = function() {
           console.log(data)
           imsApiClient.updateRelease(config, projectId, id, data, function(r) {
             console.log(r)
-            imsApiClient.getReleases(config, projectId, imsApiApp.createCallback('releases', releasesTableId))
+            imsApiClient.getReleases(config, projectId, imsApiApp.createCallback('result', releasesTableId))
             $.fancybox.close()
             $(releaseEditFormId).off('submit')
           })
@@ -188,7 +188,7 @@ var imsApiApp = function() {
               var page = imsApiClient.Page(files[fileIdx].name, base64enc)
               console.log(page)
               imsApiClient.createPage(config, projectId, id, page, function() {
-                imsApiClient.getPages(config, projectId, id, imsApiApp.createCallback('pages', pagesTableId))
+                imsApiClient.getPages(config, projectId, id, imsApiApp.createCallback('result', pagesTableId))
                 fileIdx++
                 if (fileIdx < files.length) {
                   e.target.onload = onloadFunction(fileIdx, files)
@@ -213,7 +213,7 @@ var imsApiApp = function() {
           e.preventDefault()
           imsApiClient.deleteRelease(config, projectId, id, function(r) {
             console.log(r)
-            imsApiClient.getReleases(config, projectId, imsApiApp.createCallback('releases', releasesTableId))
+            imsApiClient.getReleases(config, projectId, imsApiApp.createCallback('result', releasesTableId))
             $.fancybox.close()
             $(releaseDeleteId).off('click')
           })
@@ -243,14 +243,14 @@ var imsApiApp = function() {
           e.preventDefault()
           imsApiClient.deletePage(config, projectId, releaseId, pageId, function(r) {
             console.log(r)
-            imsApiClient.getPages(config, projectId, releaseId, imsApiApp.createCallback('pages', pagesTableId))
+            imsApiClient.getPages(config, projectId, releaseId, imsApiApp.createCallback('result', pagesTableId))
             $.fancybox.close()
             $(releaseDeleteId).off('click')
           })
         })
       })
       
-      imsApiClient.getProjects(config, imsApiApp.createCallback('projects', projectsTableId))
+      imsApiClient.getProjects(config, imsApiApp.createCallback('result', projectsTableId))
     },
   }
 }()
