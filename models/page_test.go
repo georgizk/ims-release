@@ -247,33 +247,33 @@ func TestSavePage(t *testing.T) {
 	const id = 7
 
 	// success case
-	pSuccess := NewPage(Release{Id: 5}, "img.png", time.Now())
-	mock.ExpectExec(query).WithArgs(pSuccess.Name, pSuccess.CreatedAt, pSuccess.ReleaseID).WillReturnResult(sqlmock.NewResult(id, 1))
+	p := NewPage(Release{Id: 5}, "img.png", time.Now())
+	mock.ExpectExec(query).WithArgs(p.Name, p.CreatedAt, p.ReleaseID).WillReturnResult(sqlmock.NewResult(id, 1))
 
 	// error case
 	expErr := errors.New("error")
-	mock.ExpectExec(query).WithArgs(pSuccess.Name, pSuccess.CreatedAt, pSuccess.ReleaseID).WillReturnError(expErr)
+	mock.ExpectExec(query).WithArgs(p.Name, p.CreatedAt, p.ReleaseID).WillReturnError(expErr)
 
 	// error result case
 	expErr2 := errors.New("error2")
-	mock.ExpectExec(query).WithArgs(pSuccess.Name, pSuccess.CreatedAt, pSuccess.ReleaseID).WillReturnResult(sqlmock.NewErrorResult(expErr2))
+	mock.ExpectExec(query).WithArgs(p.Name, p.CreatedAt, p.ReleaseID).WillReturnResult(sqlmock.NewErrorResult(expErr2))
 
 	// tests success case
-	err = pSuccess.Save(db)
+	p, err = SavePage(db, p)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, uint32(id), pSuccess.Id)
+	assert.Equal(t, uint32(id), p.Id)
 
 	// tests error case
-	err = pSuccess.Save(db)
+	p, err = SavePage(db, p)
 	assert.Equal(t, expErr, err)
 
 	// tests result error case
-	err = pSuccess.Save(db)
+	p, err = SavePage(db, p)
 	assert.Equal(t, expErr2, err)
 
 	// tests validation failed case
 	pErr := Page{Name: "bla"}
-	err = pErr.Save(db)
+	pErr, err = SavePage(db, pErr)
 	assert.NotEqual(t, nil, err)
 
 	err = mock.ExpectationsWereMet()
@@ -286,7 +286,7 @@ func TestUpdatePage(t *testing.T) {
 	defer db.Close()
 
 	p := Page{}
-	err = p.Update(db)
+	p, err = UpdatePage(db, p)
 	assert.Equal(t, ErrOperationNotSupported, err)
 
 	err = mock.ExpectationsWereMet()
@@ -304,10 +304,10 @@ func TestDeletePage(t *testing.T) {
 	mock.ExpectExec(query).WillReturnError(expErr).WithArgs(p.Id, p.ReleaseID)
 	mock.ExpectExec(query).WithArgs(p.Id, p.ReleaseID).WillReturnResult(sqlmock.NewResult(7, 1))
 
-	err = p.Delete(db)
+	p, err = DeletePage(db, p)
 	assert.Equal(t, expErr, err)
 
-	err = p.Delete(db)
+	p, err = DeletePage(db, p)
 	assert.Equal(t, nil, err)
 
 	err = mock.ExpectationsWereMet()

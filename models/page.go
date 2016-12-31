@@ -166,10 +166,10 @@ func (p *Page) Validate() error {
 }
 
 // Save inserts the page into the database and updates its Id field.
-func (p *Page) Save(db database.DB) error {
+func SavePage(db database.DB, p Page) (Page, error) {
 	validErr := p.Validate()
 	if validErr != nil {
-		return validErr
+		return p, validErr
 	}
 	// TODO - Make sure to save image data to disk before saving the Page.
 
@@ -178,24 +178,24 @@ func (p *Page) Save(db database.DB) error {
 
 	res, err := db.Exec(query, p.Name, p.CreatedAt, p.ReleaseID)
 	if err != nil {
-		return err
+		return p, err
 	}
 	id, err := res.LastInsertId()
 	if err != nil {
-		return err
+		return p, err
 	}
 	p.Id = uint32(id)
-	return nil
+	return p, nil
 }
 
 // Update modifies all of the fields of a Page in place with whatever is currently in the struct.
-func (p *Page) Update(db database.DB) error {
-	return ErrOperationNotSupported
+func UpdatePage(db database.DB, p Page) (Page, error) {
+	return p, ErrOperationNotSupported
 }
 
 // Delete removes the Page from the database and deletes the page image from disk.
-func (p *Page) Delete(db database.DB) error {
+func DeletePage(db database.DB, p Page) (Page, error) {
 	const query = "DELETE FROM " + t_pages + " WHERE " + PGc_id + " = ? AND " + PGc_release_id + " = ? LIMIT 1"
 	_, err := db.Exec(query, p.Id, p.ReleaseID)
-	return err
+	return p, err
 }
