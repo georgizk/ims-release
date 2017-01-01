@@ -358,6 +358,7 @@ POST /projects/{projectId}/releases/{releaseId}/pages
 
 * A project with id `projectId` MUST exist
 * A release with id `releaseId` MUST exist
+* The release MUST be in draft state
 * `name` MUST end in either .png or .jpg
 * `name` MUST be unique for that release
 * `name` MUST be less than 256 bytes
@@ -410,6 +411,7 @@ DELETE /projects/{projectId}/releases/{releaseId}/pages/{pageId}
 
 * A project with id `projectId` MUST exist
 * A release with id `releaseId` MUST exist
+* The release MUST be in draft state
 
 #### Parameters
 
