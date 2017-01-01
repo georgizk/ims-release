@@ -256,8 +256,9 @@ var imsApiApp = function() {
 }()
 
 $(document).ready(function() {
-  var apiAddr = prompt('Please enter the api address')
-  var config = imsApiClient.Config(apiAddr)
+  var apiAddr = prompt('api address:')
+  var authToken = prompt('auth token:')
+  var config = imsApiClient.Config(apiAddr, authToken)
   
   $('a.overlay').click(function(e) {
     // only on left click

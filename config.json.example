@@ -6,4 +6,5 @@
   "dbName": "ims-release",
   "dbUser": "ims",
   "dbPassword": "password1"
+  "authToken": "token"
 }

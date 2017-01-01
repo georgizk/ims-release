@@ -67,5 +67,6 @@ Configuration is done via a json config file. It must contain the following fiel
 * `dbName` - database name.
 * `dbUser` - database user.
 * `dbPassword` - database password.
+* `authToken` - the secret authentication token used to authenticate `POST`, `PUT` and `DELETE` requests.
 
 Refer to `config.json.example`.

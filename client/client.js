@@ -139,7 +139,7 @@ var imsApiClient = (function() {
           }
         }
         
-        //xhr.setRequestHeader('Auth-Token', config.authToken)
+        xhr.setRequestHeader('Auth-Token', config.authToken)
 
         // send the data
         xhr.send(data)

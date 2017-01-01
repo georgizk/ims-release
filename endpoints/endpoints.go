@@ -25,12 +25,42 @@ func NewHttpHandler(cfg *config.Config) http.Handler {
 	sp := storage_provider.File{Root: cfg.ImageDirectory}
 	registerHandlers(router, db, &sp)
 
-	loggedRouter := handlers.LoggingHandler(os.Stdout, router)
-	corsRouter := handlers.CORS(
+	authHandler := NewAuthenticationHandler(cfg.AuthToken, []string{"POST", "PUT", "DELETE"}, router)
+	corsHandler := handlers.CORS(
 		handlers.AllowedOrigins([]string{"*"}),
-		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE"}))(loggedRouter)
+		handlers.AllowedHeaders([]string{"Auth-Token"}),
+		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE"}))(authHandler)
 
-	return corsRouter
+	handler := handlers.LoggingHandler(os.Stdout, corsHandler)
+
+	return handler
+}
+
+type AuthenticationHandler struct {
+	AuthToken      string
+	HandledMethods []string
+	InnerHandler   http.Handler
+}
+
+func NewAuthenticationHandler(authToken string, handledMethods []string, innerHandler http.Handler) AuthenticationHandler {
+	return AuthenticationHandler{AuthToken: authToken, HandledMethods: handledMethods, InnerHandler: innerHandler}
+}
+
+func (h AuthenticationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	token := r.Header.Get("Auth-Token")
+	handledMethod := false
+	for _, method := range h.HandledMethods {
+		if method == r.Method {
+			handledMethod = true
+			break
+		}
+	}
+
+	if token != h.AuthToken && handledMethod {
+		encodeHelper(w, ErrRspUnauthorized)
+	} else {
+		h.InnerHandler.ServeHTTP(w, r)
+	}
 }
 
 func registerHandlers(r *mux.Router, db database.DB, sp storage_provider.Binary) {
@@ -41,14 +71,16 @@ func registerHandlers(r *mux.Router, db database.DB, sp storage_provider.Binary)
 }
 
 var (
-	ErrMsgJsonDecode = "JSON format error or missing field detected."
-	ErrRspJsonDecode = NewApiResponse(http.StatusBadRequest, &ErrMsgJsonDecode)
-	ErrMsgBadRequest = "Bad request."
-	ErrRspBadRequest = NewApiResponse(http.StatusBadRequest, &ErrMsgBadRequest)
-	ErrMsgNotFound   = "Not found."
-	ErrRspNotFound   = NewApiResponse(http.StatusNotFound, &ErrMsgNotFound)
-	ErrMsgUnexpected = "Unexpected error."
-	ErrRspUnexpected = NewApiResponse(http.StatusInternalServerError, &ErrMsgUnexpected)
+	ErrMsgJsonDecode   = "JSON format error or missing field detected."
+	ErrRspJsonDecode   = NewApiResponse(http.StatusBadRequest, &ErrMsgJsonDecode)
+	ErrMsgBadRequest   = "Bad request."
+	ErrRspBadRequest   = NewApiResponse(http.StatusBadRequest, &ErrMsgBadRequest)
+	ErrMsgNotFound     = "Not found."
+	ErrRspNotFound     = NewApiResponse(http.StatusNotFound, &ErrMsgNotFound)
+	ErrMsgUnexpected   = "Unexpected error."
+	ErrRspUnexpected   = NewApiResponse(http.StatusInternalServerError, &ErrMsgUnexpected)
+	ErrMsgUnauthorized = "Authorization required."
+	ErrRspUnauthorized = NewApiResponse(http.StatusUnauthorized, &ErrMsgUnauthorized)
 )
 
 var NoErr = NewApiResponse(http.StatusOK, nil)

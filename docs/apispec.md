@@ -10,6 +10,8 @@ Unless specified otherwise, all responses will be served as JSON.  The common ex
 
 JSON responses will always contain an `error` field.  If an error occurred in processing the request, it will contain a string describing the error. Otherwise, `error` will be `null`.
 
+`POST`, `PUT` and `DELETE` requests will always require authentication via the `Auth-Token` header. The value set to the header must match the API's secret token.
+
 ## Notation
 
 Types will be represented with the name of a type, such as `string`, `bool`, `integer`, `float` etc.

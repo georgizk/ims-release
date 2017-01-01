@@ -16,6 +16,7 @@ type Config struct {
 	DbName         string `json:"dbName"`
 	DbUser         string `json:"dbUser"`
 	DbPassword     string `json:"dbPassword"`
+	AuthToken      string `json:"authToken"`
 }
 
 // MustLoad attempts to load a Config from a specified path and panics if it
