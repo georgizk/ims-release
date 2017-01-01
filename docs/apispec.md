@@ -239,16 +239,17 @@ result | Release[] | An array containing the release
 
 ### Update information about a release
 
+```
+PUT /projects/{projectId}/releases/{releaseId}
+```
+
 * A project with id `projectId` MUST exist
 * A release with id `releaseId` MUST exist
 * `identifier` MUST be unique for that project
 * `identifier` MUST be less than 11 bytes
 * `version` MUST be greater than or equal to the previous version
 * if `status` is changed from "draft" to "released", `version` MUST be greater than the previous version
-
-```
-PUT /projects/{projectId}/releases/{releaseId}
-```
+* if current `status` is "released", the new status MUST be "draft"
 
 #### Parameters
 

@@ -274,11 +274,25 @@ func TestUpdateRelease(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 	assert.Equal(t, 0, len(resp.Result))
 
+	// test editing published release error
+	mFindRelease = func(db database.DB, p models.Project, id uint32) (models.Release, error) {
+		return models.Release{Id: id, ProjectID: p.Id, Version: uint32(1), Status: "released"}, nil
+	}
+	const UpdateReq = `{"identifier":"c1","version":2,"status":"released"}`
+	w = httptest.NewRecorder()
+	r, _ = http.NewRequest("PUT", "/projects/5/releases/7", strings.NewReader(UpdateReq))
+	router.ServeHTTP(w, r)
+	decoder = json.NewDecoder(w.Body)
+	decoder.Decode(&resp)
+
+	assert.Equal(t, ErrMsgMustDraft, resp.getError().Error())
+	assert.Equal(t, http.StatusExpectationFailed, w.Code)
+	assert.Equal(t, 0, len(resp.Result))
+
 	// test downversion error
 	mFindRelease = func(db database.DB, p models.Project, id uint32) (models.Release, error) {
 		return models.Release{Id: id, ProjectID: p.Id, Version: uint32(5)}, nil
 	}
-	const UpdateReq = `{"identifier":"c1","version":2,"status":"released"}`
 
 	w = httptest.NewRecorder()
 	r, _ = http.NewRequest("PUT", "/projects/5/releases/7", strings.NewReader(UpdateReq))

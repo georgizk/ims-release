@@ -35,6 +35,8 @@ var (
 	ErrRspDownversioning = NewApiResponse(http.StatusExpectationFailed, &ErrMsgDownversioning)
 	ErrMsgMustUpversion  = "Upversioning is mandatory when publishing release."
 	ErrRspMustUpversion  = NewApiResponse(http.StatusExpectationFailed, &ErrMsgMustUpversion)
+	ErrMsgMustDraft      = "Modifying a published release is not allowed unless changing status to draft."
+	ErrRspMustDraft      = NewApiResponse(http.StatusExpectationFailed, &ErrMsgMustDraft)
 	ErrMsgReleaseUpdate  = "Could not update specified release. Please ensure the status and identifier are correct."
 	ErrRspReleaseUpdate  = NewApiResponse(http.StatusInternalServerError, &ErrMsgReleaseUpdate)
 	ErrMsgPagesNotEmpty  = "All pages must be deleted before deleting a release."
@@ -178,6 +180,12 @@ func updateRelease(db database.DB) http.HandlerFunc {
 			return
 		}
 
+		if release.Status == models.RStatusReleasedStr && request.Status != models.RStatusDraftStr {
+			log.Println("[---] Update error: must change status to draft if editing release")
+			encodeHelper(w, NewReleaseResponse(ErrRspMustDraft, []models.Release{}))
+			return
+		}
+
 		if release.Version > request.Version {
 			log.Println("[---] Update error: downversioning not allowed")
 			encodeHelper(w, NewReleaseResponse(ErrRspDownversioning, []models.Release{}))
@@ -185,7 +193,7 @@ func updateRelease(db database.DB) http.HandlerFunc {
 		}
 
 		if release.Status != request.Status && release.Version == request.Version && request.Status == models.RStatusReleasedStr {
-			log.Println("[---] Update error: you must upversion when publishing")
+			log.Println("[---] Update error: must upversion when publishing")
 			encodeHelper(w, NewReleaseResponse(ErrRspMustUpversion, []models.Release{}))
 			return
 		}
