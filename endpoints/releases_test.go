@@ -442,3 +442,103 @@ func TestDeleteRelease(t *testing.T) {
 	assert.Equal(t, 1, len(resp.Result))
 	assert.Equal(t, uint32(7), resp.Result[0].Id)
 }
+
+func TestDownloadRelease(t *testing.T) {
+	router := mux.NewRouter()
+	registerHandlers(router, nil, nil)
+	var resp ReleaseResponse
+
+	// test no release found
+	mFindProject = func(db database.DB, id uint32) (models.Project, error) {
+		assert.Equal(t, uint32(12), id)
+		return models.Project{Id: id}, nil
+	}
+
+	mFindRelease = func(db database.DB, p models.Project, id uint32) (models.Release, error) {
+		assert.Equal(t, uint32(12), p.Id)
+		assert.Equal(t, uint32(70), id)
+		return models.Release{}, errors.New("some error")
+	}
+
+	w := httptest.NewRecorder()
+	r, _ := http.NewRequest("GET", "/projects/12/releases/70/download/someName.zip", nil)
+	router.ServeHTTP(w, r)
+	decoder := json.NewDecoder(w.Body)
+	decoder.Decode(&resp)
+	assert.Equal(t, http.StatusNotFound, w.Code)
+
+	// test release found but not in released state
+	mFindRelease = func(db database.DB, p models.Project, id uint32) (models.Release, error) {
+		return models.Release{Id: id, ProjectID: p.Id, Status: "draft"}, nil
+	}
+
+	w = httptest.NewRecorder()
+	r, _ = http.NewRequest("GET", "/projects/12/releases/70/download/someName.zip", nil)
+	router.ServeHTTP(w, r)
+	decoder = json.NewDecoder(w.Body)
+	decoder.Decode(&resp)
+	assert.Equal(t, http.StatusNotFound, w.Code)
+
+	// test archive name mismatch
+	mFindRelease = func(db database.DB, p models.Project, id uint32) (models.Release, error) {
+		return models.Release{Id: id, ProjectID: p.Id, Status: "released"}, nil
+	}
+
+	mGenerateArchiveName = func(project models.Project, release models.Release) string {
+		assert.Equal(t, uint32(12), project.Id)
+		assert.Equal(t, uint32(70), release.Id)
+		return "someOtherName.zip"
+	}
+
+	w = httptest.NewRecorder()
+	r, _ = http.NewRequest("GET", "/projects/12/releases/70/download/someName.zip", nil)
+	router.ServeHTTP(w, r)
+	decoder = json.NewDecoder(w.Body)
+	decoder.Decode(&resp)
+	assert.Equal(t, http.StatusNotFound, w.Code)
+
+	// test list pages error
+	mListPages = func(db database.DB, release models.Release) ([]models.Page, error) {
+		return []models.Page{}, errors.New("some error")
+	}
+
+	w = httptest.NewRecorder()
+	r, _ = http.NewRequest("GET", "/projects/12/releases/70/download/someOtherName.zip", nil)
+	router.ServeHTTP(w, r)
+	decoder = json.NewDecoder(w.Body)
+	decoder.Decode(&resp)
+	assert.Equal(t, http.StatusNotFound, w.Code)
+
+	// test data get error
+	mListPages = func(db database.DB, release models.Release) ([]models.Page, error) {
+		return []models.Page{models.Page{Name: "p1.png"}}, nil
+	}
+
+	router = mux.NewRouter()
+	var sp SpTest
+	sp.Error = errors.New("some error")
+	sp.Testing = t
+	sp.ExpectedKey = "12/70/p1.png"
+	sp.Bytes = []byte{1, 2}
+	registerHandlers(router, nil, sp)
+
+	w = httptest.NewRecorder()
+	r, _ = http.NewRequest("GET", "/projects/12/releases/70/download/someOtherName.zip", nil)
+	router.ServeHTTP(w, r)
+	decoder = json.NewDecoder(w.Body)
+	decoder.Decode(&resp)
+	assert.Equal(t, http.StatusNotFound, w.Code)
+
+	// test success
+	sp.Error = nil
+	router = mux.NewRouter()
+	registerHandlers(router, nil, sp)
+
+	w = httptest.NewRecorder()
+	r, _ = http.NewRequest("GET", "/projects/12/releases/70/download/someOtherName.zip", nil)
+	router.ServeHTTP(w, r)
+	decoder = json.NewDecoder(w.Body)
+	decoder.Decode(&resp)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "application/zip", w.Header()["Content-Type"][0])
+}
