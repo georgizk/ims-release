@@ -93,18 +93,22 @@ func createProject(db database.DB) http.HandlerFunc {
 }
 
 // GET /projects/{projectId}
-func fetchProjectUsingRequestArgs(db database.DB, w http.ResponseWriter, r *http.Request) (models.Project, error) {
+func fetchProjectUsingRequestArgs(db database.DB, w http.ResponseWriter, r *http.Request, writeResponse bool) (models.Project, error) {
 	vars := mux.Vars(r)
 	var projectId uint32
 	numFound, err := fmt.Sscanf(vars["projectId"], "%d", &projectId)
 	if numFound != 1 || err != nil {
-		encodeHelper(w, NewProjectResponse(ErrRspBadRequest, []models.Project{}))
+		if writeResponse {
+			encodeHelper(w, NewProjectResponse(ErrRspBadRequest, []models.Project{}))
+		}
 		return models.Project{}, err
 	}
 
 	project, err := mFindProject(db, projectId)
 	if err != nil {
-		encodeHelper(w, NewProjectResponse(ErrRspNotFound, []models.Project{}))
+		if writeResponse {
+			encodeHelper(w, NewProjectResponse(ErrRspNotFound, []models.Project{}))
+		}
 		return models.Project{}, err
 	}
 
@@ -114,7 +118,7 @@ func fetchProjectUsingRequestArgs(db database.DB, w http.ResponseWriter, r *http
 // getProject obtains information about a specific project.
 func getProject(db database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		project, err := fetchProjectUsingRequestArgs(db, w, r)
+		project, err := fetchProjectUsingRequestArgs(db, w, r, true)
 		if err != nil {
 			log.Println("[---] Project fetch error:", err)
 			// response already set
@@ -130,7 +134,7 @@ func getProject(db database.DB) http.HandlerFunc {
 // updateProject updates every field of an existing project with some supplied data.
 func updateProject(db database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		project, err := fetchProjectUsingRequestArgs(db, w, r)
+		project, err := fetchProjectUsingRequestArgs(db, w, r, true)
 		if err != nil {
 			log.Println("[---] Project fetch error:", err)
 			// response already set
@@ -165,7 +169,7 @@ func updateProject(db database.DB) http.HandlerFunc {
 // deleteProject removes an entire project from the database
 func deleteProject(db database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		project, err := fetchProjectUsingRequestArgs(db, w, r)
+		project, err := fetchProjectUsingRequestArgs(db, w, r, true)
 		if err != nil {
 			log.Println("[---] Project fetch error:", err)
 			// response already set

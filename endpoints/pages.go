@@ -65,7 +65,7 @@ func RegisterPageHandlers(r *mux.Router, db database.DB, sp storage_provider.Bin
 // listPages lists descriptive information about
 func listPages(db database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		_, release, err := fetchReleaseUsingRequestArgs(db, w, r)
+		_, release, err := fetchReleaseUsingRequestArgs(db, w, r, true)
 		if err != nil {
 			log.Println("[---] Release fetch error:", err)
 			// response already set
@@ -91,7 +91,7 @@ type PageCreateReq struct {
 // createPage inserts a new page into the DB and saves page data to a file.
 func createPage(db database.DB, sp storage_provider.Binary) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		project, release, err := fetchReleaseUsingRequestArgs(db, w, r)
+		project, release, err := fetchReleaseUsingRequestArgs(db, w, r, true)
 		if err != nil {
 			log.Println("[---] Release fetch error:", err)
 			// response already set
@@ -118,14 +118,12 @@ func createPage(db database.DB, sp storage_provider.Binary) http.HandlerFunc {
 		switch mimeType {
 		case models.MimeTypePng:
 			_, err = png.Decode(bytes.NewReader(imageData))
-			break
 		case models.MimeTypeJpg:
 			_, err = jpeg.Decode(bytes.NewReader(imageData))
-			break
 		case models.MimeTypeUnknown:
+			fallthrough
 		default:
 			err = errors.New("bad extension")
-			break
 		}
 
 		if err != nil {
@@ -159,10 +157,10 @@ func createPage(db database.DB, sp storage_provider.Binary) http.HandlerFunc {
 
 func getPage(db database.DB, sp storage_provider.Binary) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		project, release, err := fetchReleaseUsingRequestArgs(db, w, r)
+		project, release, err := fetchReleaseUsingRequestArgs(db, w, r, false)
 		if err != nil {
 			log.Println("[---] Release fetch error:", err)
-			// response already set
+			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
@@ -187,8 +185,8 @@ func getPage(db database.DB, sp storage_provider.Binary) http.HandlerFunc {
 	}
 }
 
-func fetchPageUsingRequestArgs(db database.DB, w http.ResponseWriter, r *http.Request) (models.Project, models.Release, models.Page, error) {
-	project, release, err := fetchReleaseUsingRequestArgs(db, w, r)
+func fetchPageUsingRequestArgs(db database.DB, w http.ResponseWriter, r *http.Request, writeResponse bool) (models.Project, models.Release, models.Page, error) {
+	project, release, err := fetchReleaseUsingRequestArgs(db, w, r, writeResponse)
 	if err != nil {
 		return models.Project{}, models.Release{}, models.Page{}, err
 	}
@@ -197,13 +195,18 @@ func fetchPageUsingRequestArgs(db database.DB, w http.ResponseWriter, r *http.Re
 	var pageId uint32
 	numFound, err := fmt.Sscanf(vars["pageId"], "%d", &pageId)
 	if numFound != 1 || err != nil {
-		encodeHelper(w, NewPageResponse(ErrRspBadRequest, []models.Page{}))
+		if writeResponse {
+			encodeHelper(w, NewPageResponse(ErrRspBadRequest, []models.Page{}))
+		}
+
 		return project, release, models.Page{}, err
 	}
 
 	page, err := mFindPage(db, release, pageId)
 	if err != nil {
-		encodeHelper(w, NewPageResponse(ErrRspNotFound, []models.Page{}))
+		if writeResponse {
+			encodeHelper(w, NewPageResponse(ErrRspNotFound, []models.Page{}))
+		}
 		return project, release, models.Page{}, err
 	}
 	return project, release, page, nil
@@ -213,7 +216,7 @@ func fetchPageUsingRequestArgs(db database.DB, w http.ResponseWriter, r *http.Re
 // deletePage removes a page from the DB and deletes the file containing the image.
 func deletePage(db database.DB, sp storage_provider.Binary) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		project, release, page, err := fetchPageUsingRequestArgs(db, w, r)
+		project, release, page, err := fetchPageUsingRequestArgs(db, w, r, true)
 		if err != nil {
 			log.Println("[---] Page fetch error:", err)
 			// response already set

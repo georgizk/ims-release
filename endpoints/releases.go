@@ -70,7 +70,7 @@ func RegisterReleaseHandlers(r *mux.Router, db database.DB, sp storage_provider.
 // listReleases produces a list of all releases under a given project.
 func listReleases(db database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		project, err := fetchProjectUsingRequestArgs(db, w, r)
+		project, err := fetchProjectUsingRequestArgs(db, w, r, true)
 		if err != nil {
 			log.Println("[---] Project fetch error:", err)
 			// response already set
@@ -93,7 +93,7 @@ func listReleases(db database.DB) http.HandlerFunc {
 // createRelease inserts a new release into the database.
 func createRelease(db database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		project, err := fetchProjectUsingRequestArgs(db, w, r)
+		project, err := fetchProjectUsingRequestArgs(db, w, r, true)
 		if err != nil {
 			log.Println("[---] Project fetch error:", err)
 			// response already set
@@ -120,8 +120,8 @@ func createRelease(db database.DB) http.HandlerFunc {
 }
 
 // GET /projects/{projectId}/releases/{releaseId}
-func fetchReleaseUsingRequestArgs(db database.DB, w http.ResponseWriter, r *http.Request) (models.Project, models.Release, error) {
-	project, err := fetchProjectUsingRequestArgs(db, w, r)
+func fetchReleaseUsingRequestArgs(db database.DB, w http.ResponseWriter, r *http.Request, writeResponse bool) (models.Project, models.Release, error) {
+	project, err := fetchProjectUsingRequestArgs(db, w, r, writeResponse)
 	if err != nil {
 		return models.Project{}, models.Release{}, err
 	}
@@ -130,13 +130,17 @@ func fetchReleaseUsingRequestArgs(db database.DB, w http.ResponseWriter, r *http
 	var releaseId uint32
 	numFound, err := fmt.Sscanf(vars["releaseId"], "%d", &releaseId)
 	if numFound != 1 || err != nil {
-		encodeHelper(w, NewReleaseResponse(ErrRspBadRequest, []models.Release{}))
+		if writeResponse {
+			encodeHelper(w, NewReleaseResponse(ErrRspBadRequest, []models.Release{}))
+		}
 		return project, models.Release{}, err
 	}
 
 	release, err := mFindRelease(db, project, releaseId)
 	if err != nil {
-		encodeHelper(w, NewReleaseResponse(ErrRspNotFound, []models.Release{}))
+		if writeResponse {
+			encodeHelper(w, NewReleaseResponse(ErrRspNotFound, []models.Release{}))
+		}
 		return project, models.Release{}, err
 	}
 
@@ -146,7 +150,7 @@ func fetchReleaseUsingRequestArgs(db database.DB, w http.ResponseWriter, r *http
 // getRelease obtains information about a specific release.
 func getRelease(db database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		_, release, err := fetchReleaseUsingRequestArgs(db, w, r)
+		_, release, err := fetchReleaseUsingRequestArgs(db, w, r, true)
 		if err != nil {
 			log.Println("[---] Release fetch error:", err)
 			// response already set
@@ -160,7 +164,7 @@ func getRelease(db database.DB) http.HandlerFunc {
 // updateRelease updates the chapter, version, and status of a release.
 func updateRelease(db database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		_, release, err := fetchReleaseUsingRequestArgs(db, w, r)
+		_, release, err := fetchReleaseUsingRequestArgs(db, w, r, true)
 		if err != nil {
 			log.Println("[---] Release fetch error:", err)
 			// response already set
@@ -206,7 +210,7 @@ func updateRelease(db database.DB) http.HandlerFunc {
 // deleteRelease deletes a release from the DB and also all associated pages.
 func deleteRelease(db database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		_, release, err := fetchReleaseUsingRequestArgs(db, w, r)
+		_, release, err := fetchReleaseUsingRequestArgs(db, w, r, true)
 		if err != nil {
 			log.Println("[---] Release fetch error:", err)
 			// response already set
@@ -238,10 +242,10 @@ func deleteRelease(db database.DB) http.HandlerFunc {
 
 func downloadRelease(db database.DB, sp storage_provider.Binary) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		project, release, err := fetchReleaseUsingRequestArgs(db, w, r)
+		project, release, err := fetchReleaseUsingRequestArgs(db, w, r, false)
 		if err != nil {
 			log.Println("[---] Release fetch error:", err)
-			// response already set
+			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
