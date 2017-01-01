@@ -38,6 +38,8 @@ var (
 	ErrRspCreatePage   = NewApiResponse(http.StatusInternalServerError, &ErrMsgCreatePage)
 	ErrMsgDeletePage   = "Could not delete the requested page. Please try again later."
 	ErrRspDeletePage   = NewApiResponse(http.StatusInternalServerError, &ErrMsgDeletePage)
+	ErrMsgMustBeDraft  = "Action only allowed when release is in draft state."
+	ErrRspMustBeDraft  = NewApiResponse(http.StatusExpectationFailed, &ErrMsgMustBeDraft)
 )
 
 type PageResponse struct {
@@ -95,6 +97,12 @@ func createPage(db database.DB, sp storage_provider.Binary) http.HandlerFunc {
 		if err != nil {
 			log.Println("[---] Release fetch error:", err)
 			// response already set
+			return
+		}
+
+		if release.Status != models.RStatusDraftStr {
+			log.Println("[---] Invalid state:", ErrMsgMustBeDraft)
+			encodeHelper(w, NewPageResponse(ErrRspMustBeDraft, []models.Page{}))
 			return
 		}
 
@@ -220,6 +228,12 @@ func deletePage(db database.DB, sp storage_provider.Binary) http.HandlerFunc {
 		if err != nil {
 			log.Println("[---] Page fetch error:", err)
 			// response already set
+			return
+		}
+
+		if release.Status != models.RStatusDraftStr {
+			log.Println("[---] Invalid state:", ErrMsgMustBeDraft)
+			encodeHelper(w, NewPageResponse(ErrRspMustBeDraft, []models.Page{}))
 			return
 		}
 

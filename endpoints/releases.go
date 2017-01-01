@@ -183,19 +183,19 @@ func updateRelease(db database.DB) http.HandlerFunc {
 		}
 
 		if release.Status == models.RStatusReleasedStr && request.Status != models.RStatusDraftStr {
-			log.Println("[---] Update error: %s", ErrMsgMustDraft)
+			log.Println("[---] Update error:", ErrMsgMustDraft)
 			encodeHelper(w, NewReleaseResponse(ErrRspMustDraft, []models.Release{}))
 			return
 		}
 
 		if release.Version > request.Version {
-			log.Println("[---] Update error: %s", ErrMsgDownversioning)
+			log.Println("[---] Update error:", ErrMsgDownversioning)
 			encodeHelper(w, NewReleaseResponse(ErrRspDownversioning, []models.Release{}))
 			return
 		}
 
 		if release.Status != request.Status && release.Version == request.Version && request.Status == models.RStatusReleasedStr {
-			log.Println("[---] Update error: %s", ErrMsgMustUpversion)
+			log.Println("[---] Update error:", ErrMsgMustUpversion)
 			encodeHelper(w, NewReleaseResponse(ErrRspMustUpversion, []models.Release{}))
 			return
 		}
@@ -215,7 +215,7 @@ func updateRelease(db database.DB) http.HandlerFunc {
 				}
 			}
 			if creditPageFound != true {
-				log.Println("[---] Update error: %s", ErrMsgMustContainCreditPage)
+				log.Println("[---] Update error:", ErrMsgMustContainCreditPage)
 				encodeHelper(w, NewReleaseResponse(ErrRspMustContainCreditPage, []models.Release{}))
 				return
 			}

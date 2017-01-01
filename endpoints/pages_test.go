@@ -135,9 +135,24 @@ func TestCreate(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, w.Code)
 	assert.Equal(t, 0, len(resp.Result))
 
+	// test bad release state error
+	mFindRelease = func(db database.DB, p models.Project, id uint32) (models.Release, error) {
+		return models.Release{Id: id, ProjectID: p.Id, Status: "released"}, nil
+	}
+
+	w = httptest.NewRecorder()
+	r, _ = http.NewRequest("POST", "/projects/12/releases/70/pages", strings.NewReader(""))
+	router.ServeHTTP(w, r)
+	decoder = json.NewDecoder(w.Body)
+	decoder.Decode(&resp)
+
+	assert.Equal(t, ErrMsgMustBeDraft, resp.getError().Error())
+	assert.Equal(t, http.StatusExpectationFailed, w.Code)
+	assert.Equal(t, 0, len(resp.Result))
+
 	// test decode error
 	mFindRelease = func(db database.DB, p models.Project, id uint32) (models.Release, error) {
-		return models.Release{Id: id, ProjectID: p.Id}, nil
+		return models.Release{Id: id, ProjectID: p.Id, Status: "draft"}, nil
 	}
 
 	w = httptest.NewRecorder()
@@ -299,7 +314,7 @@ func TestGetPage(t *testing.T) {
 
 	// test page not found
 	mFindRelease = func(db database.DB, p models.Project, id uint32) (models.Release, error) {
-		return models.Release{Id: id, ProjectID: p.Id}, nil
+		return models.Release{Id: id, ProjectID: p.Id, Status: "draft"}, nil
 	}
 
 	mFindPageByName = func(db database.DB, release models.Release, name string) (models.Page, error) {
@@ -424,11 +439,30 @@ func TestDeletePage(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, w.Code)
 	assert.Equal(t, 0, len(resp.Result))
 
-	// test delete page error
+	// test bad release state error
 	mFindPage = func(db database.DB, release models.Release, pageId uint32) (models.Page, error) {
 		assert.Equal(t, uint32(100), pageId)
 		assert.Equal(t, uint32(70), release.Id)
 		return models.Page{Name: "somePage.png", Id: pageId, ReleaseID: release.Id}, nil
+	}
+
+	mFindRelease = func(db database.DB, p models.Project, id uint32) (models.Release, error) {
+		return models.Release{Id: id, ProjectID: p.Id, Status: "released"}, nil
+	}
+
+	w = httptest.NewRecorder()
+	r, _ = http.NewRequest("DELETE", "/projects/12/releases/70/pages/100", nil)
+	router.ServeHTTP(w, r)
+	decoder = json.NewDecoder(w.Body)
+	decoder.Decode(&resp)
+
+	assert.Equal(t, ErrMsgMustBeDraft, resp.getError().Error())
+	assert.Equal(t, http.StatusExpectationFailed, w.Code)
+	assert.Equal(t, 0, len(resp.Result))
+
+	// test delete page error
+	mFindRelease = func(db database.DB, p models.Project, id uint32) (models.Release, error) {
+		return models.Release{Id: id, ProjectID: p.Id, Status: "draft"}, nil
 	}
 
 	mDeletePage = func(db database.DB, page models.Page) (models.Page, error) {
