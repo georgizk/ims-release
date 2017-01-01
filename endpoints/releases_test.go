@@ -112,7 +112,7 @@ func TestCreateRelease(t *testing.T) {
 		return models.Release{}, errors.New("some error")
 	}
 
-	const createReq = `{"identifier":"c1","version":1,"status":"draft"}`
+	const createReq = `{"identifier":"c1","version":1}`
 	w = httptest.NewRecorder()
 	r, _ = http.NewRequest("POST", "/projects/5/releases", strings.NewReader(createReq))
 	router.ServeHTTP(w, r)
@@ -308,7 +308,6 @@ func TestUpdateRelease(t *testing.T) {
 	mFindRelease = func(db database.DB, p models.Project, id uint32) (models.Release, error) {
 		return models.Release{Id: id, ProjectID: p.Id, Version: uint32(2), Status: "draft"}, nil
 	}
-
 	w = httptest.NewRecorder()
 	r, _ = http.NewRequest("PUT", "/projects/5/releases/7", strings.NewReader(UpdateReq))
 	router.ServeHTTP(w, r)
@@ -319,9 +318,79 @@ func TestUpdateRelease(t *testing.T) {
 	assert.Equal(t, http.StatusExpectationFailed, w.Code)
 	assert.Equal(t, 0, len(resp.Result))
 
-	// test save error
+	// test credit page missing error (page fetch error)
+	mListPages = func(db database.DB, release models.Release) ([]models.Page, error) {
+		return []models.Page{}, errors.New("some error")
+	}
+
 	mFindRelease = func(db database.DB, p models.Project, id uint32) (models.Release, error) {
 		return models.Release{Id: id, ProjectID: p.Id, Version: uint32(1), Status: "draft"}, nil
+	}
+
+	w = httptest.NewRecorder()
+	r, _ = http.NewRequest("PUT", "/projects/5/releases/7", strings.NewReader(UpdateReq))
+	router.ServeHTTP(w, r)
+	decoder = json.NewDecoder(w.Body)
+	decoder.Decode(&resp)
+
+	assert.Equal(t, ErrMsgUnexpected, resp.getError().Error())
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.Equal(t, 0, len(resp.Result))
+
+	// test save error (draft)
+	const UpdateReqDraft = `{"identifier":"c1","version":2,"status":"draft"}`
+	mUpdateRelease = func(db database.DB, release models.Release) (models.Release, error) {
+		assert.Equal(t, "draft", release.Status)
+		assert.Equal(t, "c1", release.Identifier)
+		assert.Equal(t, uint32(2), release.Version)
+		return release, errors.New("some error")
+	}
+
+	w = httptest.NewRecorder()
+	r, _ = http.NewRequest("PUT", "/projects/5/releases/7", strings.NewReader(UpdateReqDraft))
+	router.ServeHTTP(w, r)
+	decoder = json.NewDecoder(w.Body)
+	decoder.Decode(&resp)
+
+	assert.Equal(t, ErrMsgReleaseUpdate, resp.getError().Error())
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.Equal(t, 0, len(resp.Result))
+
+	// test success case (draft)
+	mUpdateRelease = func(db database.DB, release models.Release) (models.Release, error) {
+		return release, nil
+	}
+
+	w = httptest.NewRecorder()
+	r, _ = http.NewRequest("PUT", "/projects/5/releases/7", strings.NewReader(UpdateReqDraft))
+	router.ServeHTTP(w, r)
+	decoder = json.NewDecoder(w.Body)
+	decoder.Decode(&resp)
+
+	assert.Equal(t, nil, resp.getError())
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, 1, len(resp.Result))
+	assert.Equal(t, "c1", resp.Result[0].Identifier)
+
+	// test credit page missing error
+	mListPages = func(db database.DB, release models.Release) ([]models.Page, error) {
+		assert.Equal(t, uint32(7), release.Id)
+		return []models.Page{models.Page{Name: "someName.png"}, models.Page{Name: "someOtherName.png"}}, nil
+	}
+
+	w = httptest.NewRecorder()
+	r, _ = http.NewRequest("PUT", "/projects/5/releases/7", strings.NewReader(UpdateReq))
+	router.ServeHTTP(w, r)
+	decoder = json.NewDecoder(w.Body)
+	decoder.Decode(&resp)
+
+	assert.Equal(t, ErrMsgMustContainCreditPage, resp.getError().Error())
+	assert.Equal(t, http.StatusExpectationFailed, w.Code)
+	assert.Equal(t, 0, len(resp.Result))
+
+	// test save error (published)
+	mListPages = func(db database.DB, release models.Release) ([]models.Page, error) {
+		return []models.Page{models.Page{Name: "someName.png"}, models.Page{Name: "someOtherName.png"}, models.Page{Name: "!creditPage.jpg"}}, nil
 	}
 
 	mUpdateRelease = func(db database.DB, release models.Release) (models.Release, error) {
@@ -341,13 +410,13 @@ func TestUpdateRelease(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 	assert.Equal(t, 0, len(resp.Result))
 
-	// test success case
+	// test success case (published)
 	mUpdateRelease = func(db database.DB, release models.Release) (models.Release, error) {
 		return release, nil
 	}
 
 	w = httptest.NewRecorder()
-	r, _ = http.NewRequest("PUT", "/projects/5/releases/7", strings.NewReader(UpdateReq))
+	r, _ = http.NewRequest("PUT", "/projects/5/releases/7", strings.NewReader(UpdateReqDraft))
 	router.ServeHTTP(w, r)
 	decoder = json.NewDecoder(w.Body)
 	decoder.Decode(&resp)

@@ -28,11 +28,11 @@ func TestReleaseStatus(t *testing.T) {
 func TestNewRelease(t *testing.T) {
 	tm := time.Now()
 	p := Project{Id: 7}
-	r := NewRelease(p, "identifier", 1, "status", tm)
+	r := NewRelease(p, "identifier", 1, tm)
 	assert.Equal(t, p.Id, r.ProjectID)
 	assert.Equal(t, "identifier", r.Identifier)
 	assert.Equal(t, uint32(1), r.Version)
-	assert.Equal(t, "status", r.Status)
+	assert.Equal(t, "draft", r.Status)
 	assert.Equal(t, tm, r.ReleasedOn)
 }
 

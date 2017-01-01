@@ -205,7 +205,6 @@ Name | Type | Description
 -----|------|------------
 identifier | string | A unique identifier for the release
 version | integer | The version of the release corresponding to that identifier
-status | string | The release status, "released" or "draft"
 
 #### Response
 
@@ -250,6 +249,7 @@ PUT /projects/{projectId}/releases/{releaseId}
 * `version` MUST be greater than or equal to the previous version
 * if `status` is changed from "draft" to "released", `version` MUST be greater than the previous version
 * if current `status` is "released", the new status MUST be "draft"
+* if new `status` is "released", there MUST be a credit page added to the release. A credit page shall be identified by a leading ! character in the filename.
 
 #### Parameters
 
@@ -259,7 +259,7 @@ projectId | integer | The unique id of the project under which the release was c
 releaseId | integer | The unique id of the release
 identifier | string | The new unique identifier for the release
 version | integer | The new version number for the release
-status | string | The new status of the release
+status | string | The new status of the release, one of "draft" or "released"
 
 #### Response
 

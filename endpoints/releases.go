@@ -27,22 +27,24 @@ var (
 )
 
 var (
-	ErrMsgListReleases   = "Could not obtain a list of releases. Please try again later."
-	ErrRspListReleases   = NewApiResponse(http.StatusInternalServerError, &ErrMsgListReleases)
-	ErrMsgCreateRelease  = "Could not create new release. Please check that the status is valid or try again later."
-	ErrRspCreateRelease  = NewApiResponse(http.StatusInternalServerError, &ErrMsgCreateRelease)
-	ErrMsgDownversioning = "Downversioning is not allowed."
-	ErrRspDownversioning = NewApiResponse(http.StatusExpectationFailed, &ErrMsgDownversioning)
-	ErrMsgMustUpversion  = "Upversioning is mandatory when publishing release."
-	ErrRspMustUpversion  = NewApiResponse(http.StatusExpectationFailed, &ErrMsgMustUpversion)
-	ErrMsgMustDraft      = "Modifying a published release is not allowed unless changing status to draft."
-	ErrRspMustDraft      = NewApiResponse(http.StatusExpectationFailed, &ErrMsgMustDraft)
-	ErrMsgReleaseUpdate  = "Could not update specified release. Please ensure the status and identifier are correct."
-	ErrRspReleaseUpdate  = NewApiResponse(http.StatusInternalServerError, &ErrMsgReleaseUpdate)
-	ErrMsgPagesNotEmpty  = "All pages must be deleted before deleting a release."
-	ErrRspPagesNotEmpty  = NewApiResponse(http.StatusExpectationFailed, &ErrMsgPagesNotEmpty)
-	ErrMsgReleaseDelete  = "Could not delete the release. Please check that the releaseId is correct or try again later."
-	ErrRspReleaseDelete  = NewApiResponse(http.StatusInternalServerError, &ErrMsgReleaseDelete)
+	ErrMsgListReleases          = "Could not obtain a list of releases. Please try again later."
+	ErrRspListReleases          = NewApiResponse(http.StatusInternalServerError, &ErrMsgListReleases)
+	ErrMsgCreateRelease         = "Could not create new release. Please check that the status is valid or try again later."
+	ErrRspCreateRelease         = NewApiResponse(http.StatusInternalServerError, &ErrMsgCreateRelease)
+	ErrMsgDownversioning        = "Downversioning is not allowed."
+	ErrRspDownversioning        = NewApiResponse(http.StatusExpectationFailed, &ErrMsgDownversioning)
+	ErrMsgMustUpversion         = "Upversioning is mandatory when publishing release."
+	ErrRspMustUpversion         = NewApiResponse(http.StatusExpectationFailed, &ErrMsgMustUpversion)
+	ErrMsgMustDraft             = "Modifying a published release is not allowed unless changing status to draft."
+	ErrRspMustDraft             = NewApiResponse(http.StatusExpectationFailed, &ErrMsgMustDraft)
+	ErrMsgMustContainCreditPage = "A release must contain a credit page before it can be published."
+	ErrRspMustContainCreditPage = NewApiResponse(http.StatusExpectationFailed, &ErrMsgMustContainCreditPage)
+	ErrMsgReleaseUpdate         = "Could not update specified release. Please ensure the status and identifier are correct."
+	ErrRspReleaseUpdate         = NewApiResponse(http.StatusInternalServerError, &ErrMsgReleaseUpdate)
+	ErrMsgPagesNotEmpty         = "All pages must be deleted before deleting a release."
+	ErrRspPagesNotEmpty         = NewApiResponse(http.StatusExpectationFailed, &ErrMsgPagesNotEmpty)
+	ErrMsgReleaseDelete         = "Could not delete the release. Please check that the releaseId is correct or try again later."
+	ErrRspReleaseDelete         = NewApiResponse(http.StatusInternalServerError, &ErrMsgReleaseDelete)
 )
 
 type ReleaseResponse struct {
@@ -109,7 +111,7 @@ func createRelease(db database.DB) http.HandlerFunc {
 			return
 		}
 
-		release := mNewRelease(project, request.Identifier, request.Version, request.Status, time.Now())
+		release := mNewRelease(project, request.Identifier, request.Version, time.Now())
 		release, err = mSaveRelease(db, release)
 		if err != nil {
 			log.Println("[---] Insert error:", err)
@@ -181,21 +183,42 @@ func updateRelease(db database.DB) http.HandlerFunc {
 		}
 
 		if release.Status == models.RStatusReleasedStr && request.Status != models.RStatusDraftStr {
-			log.Println("[---] Update error: must change status to draft if editing release")
+			log.Println("[---] Update error: %s", ErrMsgMustDraft)
 			encodeHelper(w, NewReleaseResponse(ErrRspMustDraft, []models.Release{}))
 			return
 		}
 
 		if release.Version > request.Version {
-			log.Println("[---] Update error: downversioning not allowed")
+			log.Println("[---] Update error: %s", ErrMsgDownversioning)
 			encodeHelper(w, NewReleaseResponse(ErrRspDownversioning, []models.Release{}))
 			return
 		}
 
 		if release.Status != request.Status && release.Version == request.Version && request.Status == models.RStatusReleasedStr {
-			log.Println("[---] Update error: must upversion when publishing")
+			log.Println("[---] Update error: %s", ErrMsgMustUpversion)
 			encodeHelper(w, NewReleaseResponse(ErrRspMustUpversion, []models.Release{}))
 			return
+		}
+
+		if release.Status != request.Status && request.Status == models.RStatusReleasedStr {
+			pages, err := mListPages(db, release)
+			if err != nil {
+				log.Println("[---] Update error:", err)
+				encodeHelper(w, NewReleaseResponse(ErrRspUnexpected, []models.Release{}))
+				return
+			}
+			creditPageFound := false
+			for _, page := range pages {
+				if len(page.Name) > 0 && page.Name[0] == '!' {
+					creditPageFound = true
+					break
+				}
+			}
+			if creditPageFound != true {
+				log.Println("[---] Update error: %s", ErrMsgMustContainCreditPage)
+				encodeHelper(w, NewReleaseResponse(ErrRspMustContainCreditPage, []models.Release{}))
+				return
+			}
 		}
 
 		release.Version = request.Version

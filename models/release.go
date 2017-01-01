@@ -75,13 +75,13 @@ const (
 
 // NewRelease constructs a brand new Release instance, with a default state lacking information its (future) position in
 // a database.
-func NewRelease(p Project, identifier string, version uint32, status string, tm time.Time) Release {
+func NewRelease(p Project, identifier string, version uint32, tm time.Time) Release {
 	return Release{
 		0,
 		identifier,
 		"ims", // @TODO make this variable
 		version,
-		status,
+		RStatusDraftStr,
 		tm,
 		p.Id,
 	}
