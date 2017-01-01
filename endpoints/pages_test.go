@@ -483,6 +483,8 @@ func TestDeletePage(t *testing.T) {
 	var sp SpTest
 	sp.Testing = t
 	sp.ExpectedKey = "12/70/somePage.png"
+	// confirm that still succeeds even if page deletion fails (just exercises the code path)
+	sp.Error = errors.New("delete error")
 	router = mux.NewRouter()
 	registerHandlers(router, nil, sp)
 

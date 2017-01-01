@@ -239,13 +239,22 @@ func deletePage(db database.DB, sp storage_provider.Binary) http.HandlerFunc {
 
 		filePath := mGeneratePagePath(project, release, page.Name)
 		log.Println("[+++] Attempting to delete page", page)
+
 		page, err = mDeletePage(db, page)
 		if err != nil {
 			log.Println("[---] Delete error:", err)
 			encodeHelper(w, NewPageResponse(ErrRspDeletePage, []models.Page{}))
 			return
 		}
-		sp.Unset(filePath)
+
+		err = sp.Unset(filePath)
+		if err != nil {
+			// this is for logging only - could later on implement some garbage
+			// collection routine to delete orphaned pages if this ever becomes
+			// an issue
+			log.Println("[---] Page delete error:", err)
+		}
+
 		encodeHelper(w, NewPageResponse(NoErr, []models.Page{page}))
 	}
 }
