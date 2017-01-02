@@ -18,7 +18,7 @@ func (sp *File) Set(key string, data []byte) error {
 	// @TODO should make sure that generated path does not go outside of Root
 	// should also make sure that the path name is valid (for use in archives etc.)
 	dir := filepath.Dir(filePath)
-	err := os.MkdirAll(dir, os.ModeDir)
+	err := os.MkdirAll(dir, os.ModeDir|0700)
 	if err != nil {
 		return err
 	}
