@@ -364,8 +364,8 @@ func getReleases(apiRoute string, projectId uint32) (string, error) {
 
 func parseReleaseResponse(str string) (endpoints.ReleaseResponse, error) {
 	var resp endpoints.ReleaseResponse
-	r, err := parseResponse(str, resp)
-	return r.(endpoints.ReleaseResponse), err
+	err := parseResponse(str, &resp)
+	return resp, err
 }
 
 func getPages(apiRoute string, projectId, releaseId uint32) (string, error) {
@@ -381,8 +381,8 @@ func getPages(apiRoute string, projectId, releaseId uint32) (string, error) {
 
 func parsePageResponse(str string) (endpoints.PageResponse, error) {
 	var resp endpoints.PageResponse
-	r, err := parseResponse(str, resp)
-	return r.(endpoints.PageResponse), err
+	err := parseResponse(str, &resp)
+	return resp, err
 }
 
 func getProjects(apiRoute string) (string, error) {
@@ -398,17 +398,17 @@ func getProjects(apiRoute string) (string, error) {
 
 func parseProjectResponse(str string) (endpoints.ProjectResponse, error) {
 	var resp endpoints.ProjectResponse
-	r, err := parseResponse(str, resp)
-	return r.(endpoints.ProjectResponse), err
+	err := parseResponse(str, &resp)
+	return resp, err
 }
 
-func parseResponse(str string, resp interface{}) (interface{}, error) {
+func parseResponse(str string, resp interface{}) error {
 	decoder := json.NewDecoder(strings.NewReader(str))
-	err := decoder.Decode(&resp)
+	err := decoder.Decode(resp)
 	if err != nil {
-		return resp, err
+		return err
 	}
-	return resp, nil
+	return nil
 }
 
 func addPages(apiRoute, authToken, imageFolder string, projectId, releaseId uint32) error {
