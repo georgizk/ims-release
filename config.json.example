@@ -5,6 +5,6 @@
   "dbAddress": "127.0.0.1:3306",
   "dbName": "ims-release",
   "dbUser": "ims",
-  "dbPassword": "password1"
+  "dbPassword": "password1",
   "authToken": "token"
 }
