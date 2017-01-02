@@ -77,6 +77,8 @@ func importProject(apiRoute, authToken, projectsFolder string) error {
 		return err
 	}
 
+	usedIdentifiers := map[string]string{} // a map of projectId-identifier to path
+
 	for _, d := range projectDirs {
 		if !d.IsDir() {
 			continue
@@ -124,9 +126,17 @@ func importProject(apiRoute, authToken, projectsFolder string) error {
 			identifier = strings.Replace(identifier, "Extra", "e", 1)
 			identifier = strings.Replace(identifier, "Prologue part", "p", 1)
 			if len(identifier) > 10 {
-				log.Println("skipping release (identifier too long):", projectId, d.Name())
+				log.Println("skipping release (identifier too long):", projectId, path.Join(projectFolder, d.Name()))
 				continue
 			}
+			identifierKey := fmt.Sprintf("%d-%s", projectId, identifier)
+			existingPath := usedIdentifiers[identifierKey]
+			if existingPath != "" {
+				log.Printf("skipping release (identifier already used by %s): %d %s\n", existingPath, projectId, path.Join(projectFolder, d.Name()))
+				continue
+			}
+
+			usedIdentifiers[identifierKey] = path.Join(projectFolder, d.Name())
 
 			releaseId, err := addRelease(apiRoute, authToken, identifier, releasesResponse, projectId)
 			if err != nil {
