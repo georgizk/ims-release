@@ -57,10 +57,10 @@ type pageAddRequest struct {
 	Data string `json:"data"`
 }
 
-func importProject(apiRoute, authToken, projectFolder string) error {
-	// imports project from the imangascans reader
-	// assumes the following path: <prjoect folder>/<chapter folder>/<images>
-	files, err := ioutil.ReadDir(projectFolder)
+func importProject(apiRoute, authToken, projectsFolder string) error {
+	// imports projects from the imangascans reader
+	// assumes the following path: <projects folder>/<prjoect folder>/<chapter folder>/<images>
+	projectDirs, err := ioutil.ReadDir(projectsFolder)
 	if err != nil {
 		return err
 	}
@@ -77,39 +77,50 @@ func importProject(apiRoute, authToken, projectFolder string) error {
 		return err
 	}
 
-	shorhtand := path.Base(projectFolder)
-	projectId, err := addProject(apiRoute, authToken, shorhtand, projectsResponse)
-
-	if err != nil {
-		return err
-	}
-
-	str, err = getReleases(apiRoute, projectId)
-	if err != nil {
-		return err
-	}
-
-	decoder = json.NewDecoder(strings.NewReader(str))
-	var releasesResponse endpoints.ReleaseResponse
-	err = decoder.Decode(&releasesResponse)
-	if err != nil {
-		return err
-	}
-
-	for _, d := range files {
+	for _, d := range projectDirs {
 		if !d.IsDir() {
 			continue
 		}
-		tokens := strings.Split(d.Name(), " ")
-		identifier := fmt.Sprintf("Ch%s", tokens[0])
-		releaseId, err := addRelease(apiRoute, authToken, identifier, releasesResponse, projectId)
+		projectFolder := path.Join(projectsFolder, d.Name())
+		releaseDirs, err := ioutil.ReadDir(projectFolder)
 		if err != nil {
 			return err
 		}
-		imageFolder := path.Join(projectFolder, d.Name())
-		err = addPages(apiRoute, authToken, imageFolder, projectId, releaseId)
+
+		shorhtand := path.Base(projectFolder)
+		projectId, err := addProject(apiRoute, authToken, shorhtand, projectsResponse)
+
 		if err != nil {
 			return err
+		}
+
+		str, err = getReleases(apiRoute, projectId)
+		if err != nil {
+			return err
+		}
+
+		decoder = json.NewDecoder(strings.NewReader(str))
+		var releasesResponse endpoints.ReleaseResponse
+		err = decoder.Decode(&releasesResponse)
+		if err != nil {
+			return err
+		}
+
+		for _, d := range releaseDirs {
+			if !d.IsDir() {
+				continue
+			}
+			tokens := strings.Split(d.Name(), " ")
+			identifier := fmt.Sprintf("Ch%s", tokens[0])
+			releaseId, err := addRelease(apiRoute, authToken, identifier, releasesResponse, projectId)
+			if err != nil {
+				return err
+			}
+			imageFolder := path.Join(projectFolder, d.Name())
+			err = addPages(apiRoute, authToken, imageFolder, projectId, releaseId)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
