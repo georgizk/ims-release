@@ -111,7 +111,12 @@ func importProject(apiRoute, authToken, projectsFolder string) error {
 				continue
 			}
 			tokens := strings.Split(d.Name(), " - ")
+			if len(tokens[0]) > 9 {
+				log.Println("skipping release (identifier too long):", projectId, d.Name())
+				continue
+			}
 			identifier := fmt.Sprintf("Ch%s", tokens[0])
+
 			releaseId, err := addRelease(apiRoute, authToken, identifier, releasesResponse, projectId)
 			if err != nil {
 				return err
