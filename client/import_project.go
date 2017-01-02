@@ -43,13 +43,13 @@ func main() {
 		log.Fatal(missingAuthToken)
 	}
 
-	projectFolder, err := getArg(3)
+	projectsFolder, err := getArg(3)
 	if err != nil {
 		log.Print(usage)
 		log.Fatal(missingProjectFolder)
 	}
 
-	importProject(apiRoute, authToken, projectFolder)
+	importProjects(apiRoute, authToken, projectsFolder)
 }
 
 type pageAddRequest struct {
@@ -141,7 +141,7 @@ func importRelease(apiRoute, authToken, releaseFolder string, projectId uint32, 
 	return usedIdentifiers, nil
 }
 
-func importProject(apiRoute, authToken, projectsFolder string) error {
+func importProjects(apiRoute, authToken, projectsFolder string) error {
 	// imports projects from the imangascans reader
 	// assumes the following path: <projects folder>/<prjoect folder>/<chapter folder>/<images>
 	projectDirs, err := ioutil.ReadDir(projectsFolder)
@@ -168,7 +168,7 @@ func importProject(apiRoute, authToken, projectsFolder string) error {
 
 	// first add the oneshots
 	for oneshotDir, _ := range oneshotDirs {
-		usedIdentifiers, err = addOneshot(apiRoute, authToken, oneshotDir, projectsResponse, oneshotDirs, usedIdentifiers)
+		usedIdentifiers, projectsResponse, err = addOneshot(apiRoute, authToken, oneshotDir, projectsResponse, oneshotDirs, usedIdentifiers)
 		if err != nil {
 			return err
 		}
@@ -194,7 +194,9 @@ func importProject(apiRoute, authToken, projectsFolder string) error {
 		}
 
 		name := path.Base(projectFolder)
-		projectId, err := addProject(apiRoute, authToken, name, projectsResponse)
+		// can't use projectsResponse since it will shadow projectsResponse in the outer scope
+		projectId, newResp, err := addProject(apiRoute, authToken, name, projectsResponse)
+		projectsResponse = newResp
 
 		if err != nil {
 			return err
@@ -226,23 +228,25 @@ func importProject(apiRoute, authToken, projectsFolder string) error {
 	return nil
 }
 
-func addOneshot(apiRoute, authToken, oneshotDir string, projectsResponse endpoints.ProjectResponse, oneshotDirs map[string]bool, usedIdentifiers map[string]string) (map[string]string, error) {
+func addOneshot(apiRoute, authToken, oneshotDir string, projectsResponse endpoints.ProjectResponse, oneshotDirs map[string]bool, usedIdentifiers map[string]string) (map[string]string, endpoints.ProjectResponse, error) {
 	name := path.Base(oneshotDir)
-	projectId, err := addProject(apiRoute, authToken, name, projectsResponse)
+	projectId, projectsResponse, err := addProject(apiRoute, authToken, name, projectsResponse)
 
 	str, err := getReleases(apiRoute, projectId)
 	if err != nil {
-		return usedIdentifiers, err
+		return usedIdentifiers, projectsResponse, err
 	}
 
 	releasesResponse, err := parseReleaseResponse(str)
 	if err != nil {
-		return usedIdentifiers, err
+		return usedIdentifiers, projectsResponse, err
 	}
 
-	return importRelease(apiRoute, authToken,
+	usedIdentifiers, err = importRelease(apiRoute, authToken,
 		oneshotDir, projectId, releasesResponse,
 		oneshotDirs, usedIdentifiers)
+
+	return usedIdentifiers, projectsResponse, err
 }
 
 func makeRequest(req *http.Request) (string, error) {
@@ -256,7 +260,7 @@ func makeRequest(req *http.Request) (string, error) {
 	return string(data), err
 }
 
-func addProject(apiRoute, authToken, name string, prResp endpoints.ProjectResponse) (uint32, error) {
+func addProject(apiRoute, authToken, name string, prResp endpoints.ProjectResponse) (uint32, endpoints.ProjectResponse, error) {
 	shorthand := name
 	if len(shorthand) > 30 {
 		shorthand = shorthand[0:30]
@@ -264,6 +268,7 @@ func addProject(apiRoute, authToken, name string, prResp endpoints.ProjectRespon
 
 	for _, pr := range prResp.Result {
 		if pr.Shorthand == shorthand {
+			log.Println("Project", shorthand, "already exists")
 			if pr.Name != name {
 				pr.Name = name
 				uri := fmt.Sprintf("%s/projects/%d", apiRoute, pr.Id)
@@ -280,7 +285,7 @@ func addProject(apiRoute, authToken, name string, prResp endpoints.ProjectRespon
 					}
 				}
 			}
-			return pr.Id, nil
+			return pr.Id, prResp, nil
 		}
 	}
 
@@ -288,22 +293,24 @@ func addProject(apiRoute, authToken, name string, prResp endpoints.ProjectRespon
 	uri := fmt.Sprintf("%s/projects", apiRoute)
 	str, err := makeJsonRequest("POST", uri, authToken, project)
 	if err != nil {
-		return 0, err
+		return 0, prResp, err
 	}
 	resp, err := parseProjectResponse(str)
 	if err != nil {
-		return 0, err
+		return 0, prResp, err
 	}
 
 	if resp.Error != nil {
-		return 0, errors.New(*resp.Error)
+		return 0, prResp, errors.New(*resp.Error)
 	}
 
 	if 1 != len(resp.Result) {
-		return 0, errors.New("no result found")
+		return 0, prResp, errors.New("no result found")
 	}
 
-	return resp.Result[0].Id, nil
+	prResp.Result = append(prResp.Result, resp.Result[0])
+
+	return resp.Result[0].Id, prResp, nil
 }
 
 func makeJsonRequest(method, uri, authToken string, entity interface{}) (string, error) {
