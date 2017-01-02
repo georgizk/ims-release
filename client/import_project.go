@@ -26,7 +26,7 @@ func getArg(argIdx int) (string, error) {
 }
 
 func main() {
-	const usage = "Usage: client <apiRoute> <authToken> <projectFolder>\n"
+	const usage = "Usage: import_project <apiRoute> <authToken> <projectFolder>\n"
 	const missingApiRoute = "apiRoute missing.\n"
 	const missingAuthToken = "authToken missing.\n"
 	const missingProjectFolder = "projectFolder missing.\n"
