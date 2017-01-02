@@ -118,6 +118,11 @@ func importProject(apiRoute, authToken, projectsFolder string) error {
 			if identifier[0] >= '0' && identifier[0] <= '9' {
 				identifier = fmt.Sprintf("Ch%s", identifier)
 			}
+			identifier = strings.Replace(identifier, "Volume", "v", 1)
+			identifier = strings.Replace(identifier, "(", "", 1)
+			identifier = strings.Replace(identifier, ")", "", 1)
+			identifier = strings.Replace(identifier, "Extra", "e", 1)
+			identifier = strings.Replace(identifier, "Prologue part", "p", 1)
 			if len(identifier) > 10 {
 				log.Println("skipping release (identifier too long):", projectId, d.Name())
 				continue
