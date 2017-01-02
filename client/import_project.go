@@ -110,7 +110,7 @@ func importProject(apiRoute, authToken, projectsFolder string) error {
 			if !d.IsDir() {
 				continue
 			}
-			tokens := strings.Split(d.Name(), " ")
+			tokens := strings.Split(d.Name(), " - ")
 			identifier := fmt.Sprintf("Ch%s", tokens[0])
 			releaseId, err := addRelease(apiRoute, authToken, identifier, releasesResponse, projectId)
 			if err != nil {
