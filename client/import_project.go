@@ -155,7 +155,6 @@ func addProject(apiRoute, authToken, shorthand string, prResp endpoints.ProjectR
 
 	for _, pr := range prResp.Result {
 		if pr.Shorthand == shorthand {
-			log.Println("Project found:", pr.Id)
 			return pr.Id, nil
 		}
 	}
@@ -199,7 +198,6 @@ func addRelease(apiRoute, authToken, identifier string, resp endpoints.ReleaseRe
 
 	for _, rel := range resp.Result {
 		if rel.Identifier == identifier && rel.Version == uint32(0) {
-			log.Println("Release found:", rel.Id)
 			return rel.Id, nil
 		}
 	}
@@ -282,6 +280,17 @@ func addPages(apiRoute, authToken, imageFolder string, projectId, releaseId uint
 		return err
 	}
 
+	decoder := json.NewDecoder(strings.NewReader(pagesStr))
+	var pagesResponse endpoints.PageResponse
+	err = decoder.Decode(&pagesResponse)
+	if err != nil {
+		return err
+	}
+
+	if pagesResponse.Error != nil {
+		return errors.New(*pagesResponse.Error)
+	}
+
 	addRequests := make([]pageAddRequest, 0, len(files))
 
 	for _, file := range files {
@@ -299,7 +308,15 @@ func addPages(apiRoute, authToken, imageFolder string, projectId, releaseId uint
 			continue
 		}
 
-		if strings.Contains(pagesStr, fmt.Sprintf(`"%s"`, name)) {
+		pageExists := false
+		for _, pg := range pagesResponse.Result {
+			if pg.Name == name {
+				pageExists = true
+				break
+			}
+		}
+
+		if pageExists {
 			continue
 		}
 
@@ -324,14 +341,18 @@ func addPages(apiRoute, authToken, imageFolder string, projectId, releaseId uint
 			return err
 		}
 		httpReq.Header.Add("Auth-Token", authToken)
-		log.Println("Adding page", projectId, releaseId, req.Name)
+		log.Printf("Adding page '%s' (projectId %d, releaseId %d)", req.Name, projectId, releaseId)
 		client := &http.Client{}
 		resp, err := client.Do(httpReq)
 		if err != nil {
 			return err
 		}
 		defer resp.Body.Close()
-		log.Println("response Status:", resp.Status)
+		if resp.StatusCode != http.StatusOK {
+			log.Println("response Status:", resp.Status)
+			data, _ := ioutil.ReadAll(resp.Body)
+			log.Println(string(data))
+		}
 	}
 
 	return nil
