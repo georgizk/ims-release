@@ -16,9 +16,6 @@
     <div data-role="header"><h1>Projects</h1></div>
     <div role="main" class="ui-content">
       <ul data-role="listview" data-filter="true" id="projects_list">
-        <li><a href="#">Baby Steps</a></li>
-        <li><a href="#releases">Bamora</a></li>
-        <li><a href="#">El-Palacio</a></li>
       </ul>    
     </div>
     <div data-role="footer"></div>
@@ -27,7 +24,7 @@
   <div data-role="page" id="releases" class="releasesPage">
     <div data-role="header">
       <a href="#projects" class="ui-btn ui-icon-arrow-l ui-btn-inline ui-btn-icon-left">Back</a>
-      <h1><a href="#projects">Projects</a> &gt; <span class="projectName">Bamora</span></h1>
+      <h1><a href="#projects">Projects</a> &gt; <span class="projectName"></span></h1>
     </div>
     <div role="main" class="ui-content">    
       <ul data-role="listview" data-filter="true" id="releases_list">
@@ -39,7 +36,7 @@
   <div data-role="page" id="pages">
     <div data-role="header">
       <a href="#releases" class="ui-btn ui-icon-arrow-l ui-btn-inline ui-btn-icon-left">Back</a>
-      <h1><a href="#projects">Projects</a> &gt; <a href="#releases"><span class="projectName">Bamora</span></a> &gt; <span class="releaseIdentifier">Ch001</span></h1>
+      <h1><a href="#projects">Projects</a> &gt; <a href="#releases"><span class="projectName"></span></a> &gt; <span class="releaseIdentifier"></span></h1>
     </div>
     <div role="main" class="ui-content">  
       <a id="release_download_url" href="#" class="ui-btn ui-icon-arrow-d ui-btn-inline ui-btn-icon-left">Download</a>
@@ -50,7 +47,7 @@
   </div>
   
   <script>
-    var config = imsApiClient.Config("http://api2.imangascans.org:3000", "")
+    var config = imsApiClient.Config("https://api2.imangascans.org", "")
     $(document).ready(function() {
       imsApiClient.getProjects(config, populateProjects)
     })
