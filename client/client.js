@@ -139,8 +139,10 @@ var imsApiClient = (function() {
           }
         }
         
-        xhr.setRequestHeader('Auth-Token', config.authToken)
-
+        if (config.authToken && method != "GET") {
+        	xhr.setRequestHeader('Auth-Token', config.authToken)
+        }
+        
         // send the data
         xhr.send(data)
     },

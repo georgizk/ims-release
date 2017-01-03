@@ -1,0 +1,166 @@
+<!DOCTYPE html> 
+<html>
+<head>
+	<title>Imangascans Releases</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="jquery.mobile-1.4.5.min.css" />
+  <link rel="stylesheet" href="dist/css/lightbox.min.css" />
+  <script src="jquery-1.11.1.min.js"></script>
+  <script src="jquery.mobile-1.4.5.min.js"></script>
+  <script src="dist/js/lightbox.min.js"></script>
+  <script src="client.js"></script>
+</head>
+
+<body>
+	<div data-role="page" id="projects">
+    <div data-role="header"><h1>Projects</h1></div>
+    <div role="main" class="ui-content">
+      <ul data-role="listview" data-filter="true" id="projects_list">
+        <li><a href="#">Baby Steps</a></li>
+        <li><a href="#releases">Bamora</a></li>
+        <li><a href="#">El-Palacio</a></li>
+      </ul>    
+    </div>
+    <div data-role="footer"></div>
+  </div>
+  
+  <div data-role="page" id="releases" class="releasesPage">
+    <div data-role="header">
+      <a href="#projects" class="ui-btn ui-icon-arrow-l ui-btn-inline ui-btn-icon-left">Back</a>
+      <h1><a href="#projects">Projects</a> &gt; <span class="projectName">Bamora</span></h1>
+    </div>
+    <div role="main" class="ui-content">    
+      <ul data-role="listview" data-filter="true" id="releases_list">
+      </ul>  
+    </div>
+    <div data-role="footer"></div>
+  </div>
+  
+  <div data-role="page" id="pages">
+    <div data-role="header">
+      <a href="#releases" class="ui-btn ui-icon-arrow-l ui-btn-inline ui-btn-icon-left">Back</a>
+      <h1><a href="#projects">Projects</a> &gt; <a href="#releases"><span class="projectName">Bamora</span></a> &gt; <span class="releaseIdentifier">Ch001</span></h1>
+    </div>
+    <div role="main" class="ui-content">  
+      <a id="release_download_url" href="#" class="ui-btn ui-icon-arrow-d ui-btn-inline ui-btn-icon-left">Download</a>
+      <div id="release_pages">
+      </div>
+    </div>
+    <div data-role="footer"></div>
+  </div>
+  
+  <script>
+    var config = imsApiClient.Config("http://api2.imangascans.org:3000", "")
+    $(document).ready(function() {
+      imsApiClient.getProjects(config, populateProjects)
+    })
+    
+    function loadReleases(project) {    
+      var cb = function(p) {
+        return function(data) {
+          populateReleases(data, p)
+        }
+      }(project);
+      
+      imsApiClient.getReleases(config, project.id, cb)
+    }
+    
+    function loadRelease(project, release) {      
+      var cb = function(p, r) {
+        return function(data) {
+          populatePages(data, p, r)
+        }
+      }(project, release);
+      
+      imsApiClient.getPages(config, project.id, release.id, cb)
+    }
+    
+    function populatePages(data, project, release) {    
+      if (data.error || !(data.result.length > 0)) {
+        return
+      }
+      var list = $('div#pages div#release_pages')
+      var downloadUrl = $('div#pages a#release_download_url')
+      var title = $('div#pages span.projectName')[0]
+      $(title).text(project.name)
+      
+      var releaseIdentifier = $('div#pages span.releaseIdentifier')[0]
+      $(releaseIdentifier).text(release.identifier + "(" + release.version + ")")
+
+      var archiveName = project.shorthand + " - " + release.identifier + "[" + release.version + "][" + release.scanlator + "].zip"
+      var elems = [config.apiAddr, 'projects', project.id, 'releases', release.id]
+      var root = elems.join('/')
+      downloadUrl.attr('href', [root, 'download', archiveName].join('/'))
+      
+      list.empty()
+      
+      for (var id in data.result) {
+        var page = data.result[id]        
+        var a = document.createElement('a')
+        $(a).attr('data-lightbox', 'release_pages')
+        $(a).attr('href', [root, 'pages', page.name].join('/'))
+        
+        var img = document.createElement('img')
+        $(img).attr('src', [root, 'thumbnails', page.name].join('/'))
+        $(img).attr('style', 'padding: 5px')
+        a.append(img)        
+        list.append(a)
+      } 
+            
+      $("body").pagecontainer("change", "#pages")
+    }
+    
+    function populateReleases(data, project) {
+      if (data.error || !(data.result.length > 0)) {
+        return
+      }
+      var list = $('div#releases ul#releases_list')
+      var title = $('div#releases span.projectName')[0]
+      $(title).text(project.name)
+      list.empty()
+      for (var id in data.result) {
+        var release = data.result[id]        
+        var a = document.createElement('a')
+        var li = document.createElement('li')
+        
+        a.append(document.createTextNode(release.identifier + "(" + release.version + ")"))
+        a.onclick = function(p, r) {
+          return function() { 
+            loadRelease(p, r)
+          }
+        }(project, release);
+        
+        li.append(a)
+        list.append(li)
+      }      
+      $("body").pagecontainer("change", "#releases")
+      list.listview().listview("refresh")
+    }
+    
+    function populateProjects(data) {
+      if (data.error || !(data.result.length > 0)) {
+        return
+      }
+      var list = $('div#projects ul#projects_list')
+      list.empty()
+      for (var id in data.result) {
+        var project = data.result[id]        
+        var li = document.createElement('li')
+        var a = document.createElement('a')
+        a.append(document.createTextNode(project.name))
+        $(a).click(function(p) {
+          return function() { 
+            loadReleases(p)
+          }
+        }(project))
+        
+        li.append(a)
+        list.append(li)
+      }
+      
+      $("body").pagecontainer("change", "#projects")
+      list.listview().listview("refresh")
+    }
+  </script
+</body>
+</html>
