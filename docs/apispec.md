@@ -429,3 +429,29 @@ Name | Type | Description
 -----|------|------------
 error | string | Error string
 result | Page[] | An array containing the deleted page
+
+# Download a page thumbnail
+
+```
+GET /projects/{projectId}/releases/{releaseId}/thumbnails/{filename}
+```
+
+This route takes the same filename as the pages route, but returns a thumbnail
+that is guaranteed to be at most 300 pixels wide or 200 pixels high.
+
+* A project with id `projectId` MUST exist
+* A release with id `releaseId` MUST exist
+
+#### Parameters
+
+Name | Type | Description
+-----|------|------------
+projectId | integer | The unique id of the project under which the release was created
+releaseId | integer | The unique id of the release
+filename | string | The filename of the page
+
+#### Response
+
+* Status 200: The image file will be served directly
+* Status 4xx: Invalid request
+* Status 5xx: Server error
