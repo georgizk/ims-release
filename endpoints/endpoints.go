@@ -68,6 +68,7 @@ func registerHandlers(r *mux.Router, db database.DB, sp storage_provider.Binary)
 	RegisterProjectHandlers(r, db)
 	RegisterReleaseHandlers(r, db, sp)
 	RegisterPageHandlers(r, db, sp)
+	RegisterThumbnailHandlers(r, db, sp)
 }
 
 var (
