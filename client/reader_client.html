@@ -103,8 +103,8 @@
         var img = document.createElement('img')
         $(img).attr('src', [root, 'thumbnails', page.name].join('/'))
         $(img).attr('style', 'padding: 5px')
-        a.append(img)        
-        list.append(a)
+        $(a).append(img)        
+        $(list).append(a)
       } 
             
       $("body").pagecontainer("change", "#pages")
@@ -123,15 +123,15 @@
         var a = document.createElement('a')
         var li = document.createElement('li')
         
-        a.append(document.createTextNode(release.identifier + "(" + release.version + ")"))
-        a.onclick = function(p, r) {
+        $(a).append(document.createTextNode(release.identifier + "(" + release.version + ")"))
+        $(a).click(function(p, r) {
           return function() { 
             loadRelease(p, r)
           }
-        }(project, release);
+        }(project, release));
         
-        li.append(a)
-        list.append(li)
+        $(li).append(a)
+        $(list).append(li)
       }      
       $("body").pagecontainer("change", "#releases")
       list.listview().listview("refresh")
@@ -147,15 +147,15 @@
         var project = data.result[id]        
         var li = document.createElement('li')
         var a = document.createElement('a')
-        a.append(document.createTextNode(project.name))
+        $(a).append(document.createTextNode(project.name))
         $(a).click(function(p) {
           return function() { 
             loadReleases(p)
           }
         }(project))
         
-        li.append(a)
-        list.append(li)
+        $(li).append(a)
+        $(list).append(li)
       }
       
       $("body").pagecontainer("change", "#projects")
