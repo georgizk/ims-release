@@ -430,7 +430,7 @@ Name | Type | Description
 error | string | Error string
 result | Page[] | An array containing the deleted page
 
-# Download a page thumbnail
+### Download a page thumbnail
 
 ```
 GET /projects/{projectId}/releases/{releaseId}/thumbnails/{filename}
