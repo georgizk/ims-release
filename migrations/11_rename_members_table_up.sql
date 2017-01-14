@@ -1,0 +1,1 @@
+RENAME TABLE `members` TO `contributors`;

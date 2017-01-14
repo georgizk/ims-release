@@ -9,29 +9,29 @@ import (
 	"time"
 )
 
-func TestNewMember(t *testing.T) {
+func TestNewContributor(t *testing.T) {
 	tm := time.Now()
-	m := NewMember("name", "bio", tm)
-	assert.Equal(t, "name", m.Name)
-	assert.Equal(t, "bio", m.Biography)
-	assert.Equal(t, tm, m.CreatedAt)
-	assert.Equal(t, uint32(0), m.Id)
+	c := NewContributor("name", "bio", tm)
+	assert.Equal(t, "name", c.Name)
+	assert.Equal(t, "bio", c.Biography)
+	assert.Equal(t, tm, c.CreatedAt)
+	assert.Equal(t, uint32(0), c.Id)
 }
 
-func TestFindMember(t *testing.T) {
+func TestFindContributor(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	assert.Equal(t, nil, err)
 
 	defer db.Close()
 
 	const id uint32 = 5
-	const query_select string = "SELECT (`[a-z_]+`, ){2}`[a-z_]+` FROM `members` WHERE `id` = \\?"
+	const query_select string = "SELECT (`[a-z_]+`, ){2}`[a-z_]+` FROM `contributors` WHERE `id` = \\?"
 
 	cols := []string{"name", "biography", "created_at"}
 	rows := sqlmock.NewRows(cols)
 	rows2 := sqlmock.NewRows(cols)
 	tm := time.Now()
-	m1 := Member{Id: id, Name: "name", Biography: "bio", CreatedAt: tm}
+	m1 := Contributor{Id: id, Name: "name", Biography: "bio", CreatedAt: tm}
 	rows2.AddRow(m1.Name, m1.Biography, m1.CreatedAt)
 	// case of no rows
 	mock.ExpectQuery(query_select).WithArgs(id).WillReturnRows(rows)
@@ -42,31 +42,31 @@ func TestFindMember(t *testing.T) {
 	// case of db error
 	expErr := errors.New("error")
 	mock.ExpectQuery(query_select).WithArgs(id).WillReturnError(expErr)
-	_, err = FindMember(db, id)
-	assert.Equal(t, ErrNoSuchMember, err)
+	_, err = FindContributor(db, id)
+	assert.Equal(t, ErrNoSuchContributor, err)
 
-	member, err := FindMember(db, id)
+	contributor, err := FindContributor(db, id)
 
 	assert.Equal(t, nil, err)
-	assert.Equal(t, m1, member)
+	assert.Equal(t, m1, contributor)
 
-	_, err = FindMember(db, id)
+	_, err = FindContributor(db, id)
 	assert.Equal(t, expErr, err)
 
 	err = mock.ExpectationsWereMet()
 	assert.Equal(t, nil, err)
 }
 
-func TestListMembers(t *testing.T) {
+func TestListContributors(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	assert.Equal(t, nil, err)
 	defer db.Close()
 
-	const query_select string = "SELECT (`[a-z_]+`, ){3}`[a-z_]+` FROM `members`"
+	const query_select string = "SELECT (`[a-z_]+`, ){3}`[a-z_]+` FROM `contributors`"
 
 	tm := time.Now()
-	m1 := Member{Id: 1, Name: "name", Biography: "bio", CreatedAt: tm}
-	m2 := Member{Id: 7, Name: "name2", Biography: "bio2", CreatedAt: tm}
+	m1 := Contributor{Id: 1, Name: "name", Biography: "bio", CreatedAt: tm}
+	m2 := Contributor{Id: 7, Name: "name2", Biography: "bio2", CreatedAt: tm}
 	// error case
 	expErr := errors.New("error")
 	mock.ExpectQuery(query_select).WillReturnError(expErr)
@@ -98,149 +98,149 @@ func TestListMembers(t *testing.T) {
 	mock.ExpectQuery(query_select).WillReturnRows(rows4)
 
 	// tests the error case
-	_, err = ListMembers(db)
+	_, err = ListContributors(db)
 	assert.Equal(t, expErr, err)
 
 	// tests the no results case
-	members, err := ListMembers(db)
+	contributors, err := ListContributors(db)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, 0, len(members))
+	assert.Equal(t, 0, len(contributors))
 
 	// tests the some results case
-	members, err = ListMembers(db)
+	contributors, err = ListContributors(db)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, 2, len(members))
-	assert.Equal(t, m1, members[0])
-	assert.Equal(t, m2, members[1])
+	assert.Equal(t, 2, len(contributors))
+	assert.Equal(t, m1, contributors[0])
+	assert.Equal(t, m2, contributors[1])
 
 	// tests some results with error case
-	members, err = ListMembers(db)
+	contributors, err = ListContributors(db)
 	assert.Equal(t, expErr2, err)
-	assert.Equal(t, 1, len(members))
-	assert.Equal(t, m1, members[0])
+	assert.Equal(t, 1, len(contributors))
+	assert.Equal(t, m1, contributors[0])
 
 	// tests some results with scan error case
-	members, err = ListMembers(db)
+	contributors, err = ListContributors(db)
 	assert.NotEqual(t, nil, err)
-	assert.Equal(t, 1, len(members))
-	assert.Equal(t, m1, members[0])
+	assert.Equal(t, 1, len(contributors))
+	assert.Equal(t, m1, contributors[0])
 
 	err = mock.ExpectationsWereMet()
 	assert.Equal(t, nil, err)
 }
 
-func TestValidateMember(t *testing.T) {
-	m := Member{}
+func TestValidateContributor(t *testing.T) {
+	c := Contributor{}
 
-	m.Name = strings.Repeat("a", 65536)
-	err := m.Validate()
+	c.Name = strings.Repeat("a", 65536)
+	err := c.Validate()
 	assert.Equal(t, ErrFieldTooLong, err)
 
-	m.Name = strings.Repeat("а", 32767) // cyrilic character should take 2 bytes
-	err = m.Validate()
+	c.Name = strings.Repeat("а", 32767) // cyrilic character should take 2 bytes
+	err = c.Validate()
 	assert.Equal(t, nil, err)
 
-	m.Biography = strings.Repeat("а", 32768)
-	err = m.Validate()
+	c.Biography = strings.Repeat("а", 32768)
+	err = c.Validate()
 	assert.Equal(t, ErrFieldTooLong, err)
 
-	m.Biography = strings.Repeat("b", 65535)
-	err = m.Validate()
+	c.Biography = strings.Repeat("b", 65535)
+	err = c.Validate()
 	assert.Equal(t, nil, err)
 }
 
-func TestSaveMember(t *testing.T) {
+func TestSaveContributor(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	assert.Equal(t, nil, err)
 	defer db.Close()
 
-	const query string = "INSERT INTO `members`.*"
-	m := Member{}
-	m.Name = "the name"
+	const query string = "INSERT INTO `contributors`.*"
+	c := Contributor{}
+	c.Name = "the name"
 
 	// tests validation failed case
-	m.Biography = strings.Repeat("a", 65536)
-	m, err = SaveMember(db, m)
+	c.Biography = strings.Repeat("a", 65536)
+	c, err = SaveContributor(db, c)
 	assert.Equal(t, ErrFieldTooLong, err)
 
 	// success case
-	m.Biography = "bio"
-	mock.ExpectExec(query).WithArgs(m.Name, m.Biography, m.CreatedAt).WillReturnResult(sqlmock.NewResult(7, 1))
+	c.Biography = "bio"
+	mock.ExpectExec(query).WithArgs(c.Name, c.Biography, c.CreatedAt).WillReturnResult(sqlmock.NewResult(7, 1))
 
 	// error case
 	expErr := errors.New("error")
-	mock.ExpectExec(query).WithArgs(m.Name, m.Biography, m.CreatedAt).WillReturnError(expErr)
+	mock.ExpectExec(query).WithArgs(c.Name, c.Biography, c.CreatedAt).WillReturnError(expErr)
 
 	// error result case
 	expErr2 := errors.New("error2")
-	mock.ExpectExec(query).WithArgs(m.Name, m.Biography, m.CreatedAt).WillReturnResult(sqlmock.NewErrorResult(expErr2))
+	mock.ExpectExec(query).WithArgs(c.Name, c.Biography, c.CreatedAt).WillReturnResult(sqlmock.NewErrorResult(expErr2))
 
 	// tests success case
-	m, err = SaveMember(db, m)
+	c, err = SaveContributor(db, c)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, uint32(7), m.Id)
+	assert.Equal(t, uint32(7), c.Id)
 
 	// tests error case
-	m, err = SaveMember(db, m)
+	c, err = SaveContributor(db, c)
 	assert.Equal(t, expErr, err)
 
 	// tests result error case
-	m, err = SaveMember(db, m)
+	c, err = SaveContributor(db, c)
 	assert.Equal(t, expErr2, err)
 
 	err = mock.ExpectationsWereMet()
 	assert.Equal(t, nil, err)
 }
 
-func TestUpdateMember(t *testing.T) {
+func TestUpdateContributor(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	assert.Equal(t, nil, err)
 	defer db.Close()
 
-	const query string = "UPDATE `members`.*WHERE `id` = \\? LIMIT 1"
-	m := Member{}
-	m.Name = "the name"
+	const query string = "UPDATE `contributors`.*WHERE `id` = \\? LIMIT 1"
+	c := Contributor{}
+	c.Name = "the name"
 
 	// tests validation failed case
-	m.Biography = strings.Repeat("a", 65536)
-	m, err = UpdateMember(db, m)
+	c.Biography = strings.Repeat("a", 65536)
+	c, err = UpdateContributor(db, c)
 	assert.Equal(t, ErrFieldTooLong, err)
 
 	// success case
-	m.Biography = "habs fan"
-	mock.ExpectExec(query).WithArgs(m.Name, m.Biography, m.Id).WillReturnResult(sqlmock.NewResult(7, 1))
+	c.Biography = "habs fan"
+	mock.ExpectExec(query).WithArgs(c.Name, c.Biography, c.Id).WillReturnResult(sqlmock.NewResult(7, 1))
 
 	// error case
 	expErr := errors.New("error")
-	mock.ExpectExec(query).WithArgs(m.Name, m.Biography, m.Id).WillReturnError(expErr)
+	mock.ExpectExec(query).WithArgs(c.Name, c.Biography, c.Id).WillReturnError(expErr)
 
 	// tests success case
-	m, err = UpdateMember(db, m)
+	c, err = UpdateContributor(db, c)
 	assert.Equal(t, nil, err)
 
 	// tests error case
-	m, err = UpdateMember(db, m)
+	c, err = UpdateContributor(db, c)
 	assert.Equal(t, expErr, err)
 
 	err = mock.ExpectationsWereMet()
 	assert.Equal(t, nil, err)
 }
 
-func TestDeleteMember(t *testing.T) {
+func TestDeleteContributor(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	assert.Equal(t, nil, err)
 	defer db.Close()
 
-	const query string = "DELETE FROM `members` WHERE `id` = \\? LIMIT 1"
+	const query string = "DELETE FROM `contributors` WHERE `id` = \\? LIMIT 1"
 	expErr := errors.New("error")
-	m := Member{}
-	m.Id = 7
-	mock.ExpectExec(query).WillReturnError(expErr).WithArgs(m.Id)
-	mock.ExpectExec(query).WithArgs(m.Id).WillReturnResult(sqlmock.NewResult(7, 1))
-	m, err = DeleteMember(db, m)
+	c := Contributor{}
+	c.Id = 7
+	mock.ExpectExec(query).WillReturnError(expErr).WithArgs(c.Id)
+	mock.ExpectExec(query).WithArgs(c.Id).WillReturnResult(sqlmock.NewResult(7, 1))
+	c, err = DeleteContributor(db, c)
 	assert.Equal(t, expErr, err)
 
-	m, err = DeleteMember(db, m)
+	c, err = DeleteContributor(db, c)
 	assert.Equal(t, nil, err)
 
 	err = mock.ExpectationsWereMet()

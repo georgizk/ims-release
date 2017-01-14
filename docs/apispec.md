@@ -54,6 +54,23 @@ id | integer | The page id
 name | string | Page filename
 createdAt | string | The date when the page was created
 
+### Contributor
+
+Name | Type | Description
+-----|------|------------
+id | integer | The contributor id
+name | string | Contributor name
+biography | string | The contributor's biography
+createdAt | string | The date when the contributor was created
+
+### ReleaseContributor
+Name | Type | Description
+-----|------|------------
+id | integer | The release contributor id
+contributor | Contributor | The contributor
+role | string | The contributor's role for that release
+scanlator | string | The scanlation group to which the contributor belongs
+
 ## Endpoints
 
 ### Get a list of all projects
@@ -455,3 +472,185 @@ filename | string | The filename of the page
 * Status 200: The image file will be served directly
 * Status 4xx: Invalid request
 * Status 5xx: Server error
+
+### Get the contributors to a release (staff)
+
+* A project with id `projectId` MUST exist
+* A release with id `releaseId` MUST exist
+
+```
+GET /projects/{projectId}/releases/{releaseId}/contributors
+```
+
+#### Parameters
+
+Name | Type | Description
+-----|------|------------
+projectId | integer | The unique id of the project under which the release was created
+releaseId | integer | The unique id of the release
+
+#### Response
+
+Name | Type | Description
+-----|------|------------
+error | string | Error string
+result | ReleaseContributor[] | An array containing the contributors to the release
+
+### Add a contributor to a release
+
+* A project with id `projectId` MUST exist
+* A release with id `releaseId` MUST exist
+
+```
+POST /projects/{projectId}/releases/{releaseId}/contributors
+```
+
+#### Parameters
+
+Name | Type | Description
+-----|------|------------
+projectId | integer | The unique id of the project under which the release was created
+releaseId | integer | The unique id of the release
+contributorId | integer | The unique id of the contributor
+role | string | The contributor's role (raw provider/translator/proofreader/typesetter/cleaner/quality checker)
+scanlator | string | The scanlation group to which the contributor belongs
+
+#### Response
+
+Name | Type | Description
+-----|------|------------
+error | string | Error string
+result | ReleaseContributor[] | An array containing the added release contributor
+
+### Delete a contributor from a release
+
+* A project with id `projectId` MUST exist
+* A release with id `releaseId` MUST exist
+* A release cointributor with id `releaseContributorId` MUST exist
+
+```
+DELETE /projects/{projectId}/releases/{releaseId}/contributors/{releaseContributorId}
+```
+
+#### Parameters
+
+Name | Type | Description
+-----|------|------------
+projectId | integer | The unique id of the project under which the release was created
+releaseId | integer | The unique id of the release
+releaseContributorId | integer | the unique id of the release contributor
+
+#### Response
+
+Name | Type | Description
+-----|------|------------
+error | string | Error string
+result | ReleaseContributor[] | An array containing the deleted release contributor
+
+### Get a list of contributors (staff)
+
+```
+GET /contributors
+```
+
+#### Parameters
+
+None
+
+#### Response
+
+Name | Type | Description
+-----|------|------------
+error | string | Error string
+result | Contributor[] | An array containing contributors
+
+### Create a new contributor
+
+```
+POST /contributor
+```
+
+* `name` MUST be less than 65536 bytes
+* `biography` MUST be less than 65536 bytes
+
+#### Parameters
+
+Name | Type | Description
+-----|------|------------
+name | string | The name of the contributor
+biography | string | The contributor's biography
+
+#### Response
+
+Name | Type | Description
+-----|------|------------
+error | string | Error string
+result | Contributor[] | An array containing the newly created contributor
+
+### Get information about a contributor
+
+* A cointributor with id `contributorId` MUST exist
+
+```
+GET /contributors/{contributorId}
+```
+
+#### Parameters
+
+Name | Type | Description
+-----|------|------------
+contributorId | integer | The identifier of a contributor, as returned by the create endpoint
+
+#### Response
+
+Name | Type | Description
+-----|------|------------
+error | string | Error string
+result | Contributor[] | An array containing the contributor
+
+### Update contributor information
+
+```
+PUT /contributors/{contributorId}
+```
+
+* A cointributor with id `contributorId` MUST exist
+* `name` MUST be less than 65536 bytes
+* `biography` MUST be less than 65536 bytes
+
+#### Paramters
+
+Name | Type | Description
+-----|------|------------
+contributorId | integer | The unique identifier for the contributor
+name | string | A new human-readable name for the project
+biography | string | The contributor's biography
+
+#### Response
+
+Name | Type | Description
+-----|------|------------
+error | string | Error string
+result | Contributor[] | An array containing the updated contributor
+
+### Delete a contributor
+
+```
+DELETE /contributors/{contributorId}
+```
+
+* A cointributor with id `contributorId` MUST exist
+* There MUST be 0 associated releases
+
+#### Parameters
+
+Name | Type | Description
+-----|------|------------
+contributorId | integer | The unique identifier for the contributor
+
+#### Response
+
+Name | Type | Description
+-----|------|------------
+error | string | Error string
+result | Contributor[] | An array containing the deleted contributor
