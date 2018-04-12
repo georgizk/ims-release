@@ -3,7 +3,7 @@
   "imageDirectory": "./images",
   "dbProtocol": "tcp",
   "dbAddress": "127.0.0.1:3306",
-  "dbName": "ims-release",
+  "dbName": "ims_release",
   "dbUser": "ims",
   "dbPassword": "password1",
   "authToken": "token"
