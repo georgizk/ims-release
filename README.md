@@ -51,8 +51,8 @@ go install
 Example:
 ```
 mysql -u root -p # This will bring you to the mysql prompt, prefixed by "mysql>"
-mysql> create database ims-release;
-mysql> grant all privileges on ims-release.* to 'ims'@'localhost' identified by 'password1';
+mysql> create database ims_release;
+mysql> grant all privileges on ims_release.* to 'ims'@'localhost' identified by 'password1';
 mysql> set global sql_mode = 'NO_ENGINE_SUBSTITUTION';
 ```
 
